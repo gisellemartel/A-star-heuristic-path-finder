@@ -4,3 +4,4 @@
 # For COMP 472 Section JX – Summer 2020
 # --------------------------------------------------------
 
+import geopandas as gpd
