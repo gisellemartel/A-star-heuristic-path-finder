@@ -9,7 +9,7 @@ from shapely.geometry import Polygon
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, BoundaryNorm
 
 
 # entry point of app
@@ -18,7 +18,11 @@ def init():
     plt.rcParams.update({'figure.dpi': 200})
     matplotlib.use("TkAgg")
 
-    createMapFromShpFile("./Shape/crime_dt.shp", 0.002, 50)
+    crime_map = createMapFromShpFile("./Shape/crime_dt.shp", 0.002, 50)
+
+    generateCrimeMapDataForEachCell(crime_map)
+    generateStandardDeviation(crime_map)
+    generateMean(crime_map)
 
     plt.ioff()
     plt.show()
@@ -48,23 +52,12 @@ def createMapFromShpFile(file, step_size, threshold):
     grid_size = calcNumGridCells(total_bounds, step_size)
 
     # determine the norm of the grid based on the given threshold
-    grid_norm = matplotlib.colors.BoundaryNorm([threshold], cmap.N)
+    grid_norm = BoundaryNorm([threshold], ncolors=cmap.N)
 
     # use matplotlib hist2d function to plot grid with given threshold and step size
-    crime_plot_grid = plt.hist2d(x_values, y_values, bins=grid_size, cmap=cmap, norm=grid_norm)
+    crime_map = plt.hist2d(x_values, y_values, bins=grid_size, cmap=cmap, norm=grid_norm)
 
-    vals = crime_plot_grid[0]
-    xedges = crime_plot_grid[1]
-    yedges = crime_plot_grid[2]
-
-    # xy_vertices = []
-    # for (x, xi) in zip(xedges, range(0, len(xedges) - 1)):
-    #     for (y, yi) in zip(yedges, range(0, len(yedges) - 1)):
-    #         xy_vertices.append([x, y])
-    #         plt.text(x + 0.002 / 2, y + 0.002 / 2, str(vals[xi][yi]),
-    #                  fontdict=dict(fontsize=3, ha='center', va='center'))
-
-    print(vals)
+    return crime_map
 
 
 def calcNumGridCells(total_bounds, step_size):
@@ -79,6 +72,29 @@ def calcNumGridCells(total_bounds, step_size):
     y_grid_steps = np.ceil((max_y - min_y) / step_size)
 
     return [int(x_grid_steps), int(y_grid_steps)]
+
+
+def generateCrimeMapDataForEachCell(crime_map):
+    # DEBUG
+    vals = crime_map[0]
+    xedges = crime_map[1]
+    yedges = crime_map[2]
+    xy_vertices = []
+    for (x, xi) in zip(xedges, range(0, len(xedges) - 1)):
+        for (y, yi) in zip(yedges, range(0, len(yedges) - 1)):
+            xy_vertices.append([x, y])
+            plt.text(x + 0.002 / 2, y + 0.002 / 2, str(vals[xi][yi]),
+                     fontdict=dict(fontsize=3, ha='center', va='center'))
+    print(vals)
+
+
+def generateStandardDeviation(crime_map):
+    pass
+
+
+def generateMean(crime_map):
+    pass
+
 
 
 
