@@ -18,97 +18,70 @@ def init():
     plt.rcParams.update({'figure.dpi': 200})
     matplotlib.use("TkAgg")
 
-    createMapFromShpFile("./Shape/crime_dt.shp", 0.002)
+    createMapFromShpFile("./Shape/crime_dt.shp", 0.002, 50)
 
     plt.ioff()
     plt.show()
 
 
-def createMapFromShpFile(file, step_size):
+def createMapFromShpFile(file, step_size, threshold):
     # read data from shp file and fetch attribute containing crime point data
     data = gpd.read_file(file)
     values = data.values
 
+    # create the plot figure
+    plt.figure(figsize=(7, 7))
+
     # get all the crime points on the map
     crime_points = [v[3] for v in values]
 
+    # generate a color map to represent the crime areas
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list('Crime Points MTL', ['purple', 'yellow'])
+
+    x_values = [point.x for point in crime_points]
+    y_values = [point.y for point in crime_points]
+
+    # get the bounds of the crime map from shapefile data
+    total_bounds = data.total_bounds
+
+    # get the horizontal-vertical size of grid (X*Y)
+    grid_size = calcNumGridCells(total_bounds, step_size)
+
+    # determine the norm of the grid based on the given threshold
+    grid_norm = matplotlib.colors.BoundaryNorm([threshold], cmap.N)
+
+    # use matplotlib hist2d function to plot grid with given threshold and step size
+    crime_plot_grid = plt.hist2d(x_values, y_values, bins=grid_size, cmap=cmap, norm=grid_norm)
+
+    vals = crime_plot_grid[0]
+    xedges = crime_plot_grid[1]
+    yedges = crime_plot_grid[2]
+
+    # xy_vertices = []
+    # for (x, xi) in zip(xedges, range(0, len(xedges) - 1)):
+    #     for (y, yi) in zip(yedges, range(0, len(yedges) - 1)):
+    #         xy_vertices.append([x, y])
+    #         plt.text(x + 0.002 / 2, y + 0.002 / 2, str(vals[xi][yi]),
+    #                  fontdict=dict(fontsize=3, ha='center', va='center'))
+
+    print(vals)
+
+
+def calcNumGridCells(total_bounds, step_size):
     # get the bounds of the whole crime area
-    min_x = data.total_bounds[0]
-    min_y = data.total_bounds[1]
-    max_x = data.total_bounds[2]
-    max_y = data.total_bounds[3]
+    min_x = total_bounds[0]
+    min_y = total_bounds[1]
+    max_x = total_bounds[2]
+    max_y = total_bounds[3]
 
-    # print(min_x)
-    # print(max_x)
-    # print(min_y)
-    # print(max_y)
+    # get num cells in grid based on bounds of crime area and step size
+    x_grid_steps = np.ceil((max_x - min_x) / step_size)
+    y_grid_steps = np.ceil((max_y - min_y) / step_size)
 
-    # generate array containing tick of horizontal & vertical grid lines
-    # i.e. x-values: [-73.590, -73.588, -73.586, ..... , -73.550]
-    x_grid_steps = np.arange(min_x, max_x, step_size)
-    y_grid_steps = np.arange(min_y, max_y, step_size)
-
-    # print('len of x steps:')
-    # print(len(x_grid_steps))
-    # print(len(y_grid_steps))
-
-    # create the grid with desired cell-size
-    grid = generateMapGridCells(x_grid_steps, y_grid_steps)
-    crimes_per_cell_map = generateCrimesPerCellMap(grid, crime_points)
+    return [int(x_grid_steps), int(y_grid_steps)]
 
 
-def generateMapGridCells(x_steps, y_steps):
-    polygons = []
 
-    # create polygon object for each cell of the map grid
-    #
-    #       p1-----p4
-    #       |      |
-    #       |      |
-    #       |      |
-    #       p2-----p3
-    #
-    for i in range(0, len(x_steps) - 1):
-        for j in range(0, len(y_steps) - 1):
-            p1 = (x_steps[i], y_steps[j + 1])
-            p2 = (x_steps[i], y_steps[j])
-            p3 = (x_steps[i + 1], y_steps[j])
-            p4 = (x_steps[i + 1], y_steps[j + 1])
-            # print(i)
-            # print(j)
-            # print(i + 1)
-            # print(j + 1)
-            # print('\n')
-            grid_cell = [p1, p2, p3, p4]
-            grid_cell_polygon = Polygon(grid_cell)
-            polygons.append(grid_cell_polygon)
-
-    # grid = gpd.GeoDataFrame({'geometry': polygons})
-    # grid.plot()
-    return polygons
-
-
-def generateCrimesPerCellMap(grid, crime_points):
-    for point in crime_points:
-        p1 = point.x
-        p2 = point.y
-
-        for cell in grid:
-            vertices = np.asarray(cell.exterior.coords)
-            x1 = vertices[0][0]
-            y1 = vertices[0][1]
-            x2 = vertices[2][0]
-            y2 = vertices[2][1]
-
-            if isInGridCell(x1, y1, x2, y2, p1, p2):
-                break
-
-
-# determines if a point is inside of a grid cell given its top-left and bottom-right coordinates
-def isInGridCell(x1, y1, x2, y2, p1, p2):
-    print(p1 > x1 and p1 < x2 and
-        p2 > y1 and p2 < y2)
-    return x1 < p1 < x2 and y1 < p2 < y2
 
 
 init()
