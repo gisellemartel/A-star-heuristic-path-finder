@@ -11,42 +11,68 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.widgets import Slider, Button, RadioButtons
 import numpy as np
 
+
+# create the plot figure
+fig, ax = plt.subplots(figsize=(7, 11))
+t = np.arange(-75.589, -7.550, 0.001)
+s = t
+l, = plt.plot(t, s, lw=2)
+
+# read data from shp file and fetch attribute containing crime point data
+data = gpd.read_file("./Shape/crime_dt.shp")
+values = data.values
+
+# get all the crime points on the map
+crime_points = [v[3] for v in values]
+
+x_values = [point.x for point in crime_points]
+y_values = [point.y for point in crime_points]
+
+# generate a color map to represent the crime areas
+cmap = matplotlib.colors.LinearSegmentedColormap.from_list('Crime Points MTL', ['purple', 'yellow'])
+
+# get the bounds of the crime map from shapefile data
+total_bounds = data.total_bounds
+
+
 def init():
     plt.ion()
     plt.rcParams.update({'figure.dpi': 200})
     matplotlib.use("TkAgg")
-    createMapFromShapeFile("./Shape/crime_dt.shp", 0.002, 0.5)
+
+    axmap = plt.axes([0.1, 0.25, 0.7, 0.7])
+
+    updateMap(0.002, 50, axmap)
+
+    # set layout of figures
+    axthreshold = plt.axes([0.2, 0.05, 0.5, 0.03])
+    axcell = plt.axes([0.2, 0.1, 0.5, 0.03])
+
+    # sliders to change threshold and cell size interactively
+    sthreshold = Slider(axthreshold, 'Threshold', 0, 100, valinit=50, valstep=5)
+    scell = Slider(axcell, 'Cell Size', 0.001, 0.003, valinit=0.002, valstep=0.001)
+
+    def update(val):
+        threshold = sthreshold.val
+        cell_size = scell.val
+        l.set_ydata(1)
+        updateMap(cell_size, threshold, axmap)
+        # fig.canvas.draw_idle()
+        # plt.draw()
+
+    sthreshold.on_changed(update)
+    scell.on_changed(update)
 
     plt.ioff()
     plt.title('Crime Data MTL')
     plt.show()
 
 
-def createMapFromShapeFile(file, step_size, threshold):
-    # read data from shp file and fetch attribute containing crime point data
-    data = gpd.read_file(file)
-    values = data.values
-
-    # get all the crime points on the map
-    crime_points = [v[3] for v in values]
-
-    x_values = [point.x for point in crime_points]
-    y_values = [point.y for point in crime_points]
-
-    # create the plot figure
-    fig, ax = plt.subplots(figsize=(7, 7))
-
-    # generate a color map to represent the crime areas
-    cmap = matplotlib.colors.LinearSegmentedColormap.from_list('Crime Points MTL', ['purple', 'yellow'])
-
-    # get the bounds of the crime map from shapefile data
-    total_bounds = data.total_bounds
-
+def updateMap(step_size, threshold, axmap):
     # get the horizontal-vertical size of grid (X*Y)
     grid_dimensions = calcGridDimensions(total_bounds, step_size)
-
     # use matplotlib hist2d function to plot grid with given step size
-    crime_map = plt.hist2d(x_values, y_values, bins=grid_dimensions, cmap=cmap)
+    crime_map = axmap.hist2d(x_values, y_values, bins=grid_dimensions, cmap=cmap)
 
     # obtain the # of crimes per grid cell, and sort from least to most crimes
     crimes_per_cell_sorted = np.array(crime_map[0]).flatten()
@@ -56,20 +82,21 @@ def createMapFromShapeFile(file, step_size, threshold):
     # and calculate the threshold_val based on the sorted list of # crimes
     # for example, if array = [0, 3, 5, 9] and threshold percentage is 50%
     # then the index would be 4 * 0.5 - 1 = 1 and the value would be 3
-    threshold_index = int(len(crimes_per_cell_sorted) * (1 - threshold)) - 1
+    threshold_index = int(len(crimes_per_cell_sorted) * (1 - threshold * 0.01)) - 1
     threshold_val = crimes_per_cell_sorted[threshold_index]
 
     # determine the norm of the grid based on the threshhold value
     grid_norm = BoundaryNorm([threshold_val], ncolors=cmap.N)
 
     # use matplotlib hist2d function to plot grid with given step size and threshold value
-    crime_map = plt.hist2d(x_values, y_values, bins=grid_dimensions, cmap=cmap, norm=grid_norm)
+    crime_map = axmap.hist2d(x_values, y_values, bins=grid_dimensions, cmap=cmap, norm=grid_norm)
 
     crimes_per_cell = np.array(crime_map[0])
     grid_x_ticks = np.array(crime_map[1])
     grid_y_ticks = np.array(crime_map[2])
 
     generateCrimeMapDataForEachCell(crimes_per_cell, grid_x_ticks, grid_y_ticks, step_size)
+
 
 
 def calcGridDimensions(total_bounds, step_size):
@@ -94,11 +121,11 @@ def generateCrimeMapDataForEachCell(crimes_per_cell, grid_x_ticks, grid_y_ticks,
             text_padding = step_size / 2
             margin_horizontal = grid_x_ticks[x] + text_padding
             margin_vertical = grid_y_ticks[y] + text_padding
-            plt.text(margin_horizontal, margin_vertical, display_val, fontdict=dict(fontsize=5, ha='center', va='center'))
+            plt.text(margin_horizontal, margin_vertical, display_val, fontdict=dict(fontsize=3, ha='center', va='center'))
 
     vals = crimes_per_cell.flatten()
-    plt.legend(str(np.std(vals)))
-    plt.legend(str(np.mean(vals)))
+    # plt.legend(str(np.std(vals)))
+    # plt.legend(str(np.mean(vals)))
 
 
 init()
