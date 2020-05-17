@@ -17,9 +17,6 @@ class CrimeMap:
     def __init__(self):
         # create the plot figure
         self.fig, self.ax = plt.subplots(figsize=(7, 11))
-        t = np.arange(-75.589, -7.550, 0.001)
-        s = t
-        self.l, = plt.plot(t, s, lw=2)
 
         # read data from shp file and fetch attribute containing crime point data
         self.data = gpd.read_file("./Shape/crime_dt.shp")
@@ -47,13 +44,12 @@ class CrimeMap:
         plt.rcParams.update({'figure.dpi': 200})
         matplotlib.use("TkAgg")
 
-        axmap = plt.axes([0.1, 0.25, 0.7, 0.7])
-
-        self.updateMap(0.002, 50, axmap)
-
         # set layout of figures
         axthreshold = plt.axes([0.2, 0.05, 0.5, 0.03])
         axcell = plt.axes([0.2, 0.1, 0.5, 0.03])
+        axmap = plt.axes([0.1, 0.25, 0.7, 0.7])
+
+        self.updateMap(0.002, 50, axmap)
 
         # sliders to change threshold and cell size interactively
         sthreshold = Slider(axthreshold, 'Threshold %', 0, 100, valinit=50, valstep=5, valfmt='%0.0f')
@@ -62,16 +58,18 @@ class CrimeMap:
         def update(val):
             threshold = sthreshold.val
             cell_size = scell.val
-            self.l.set_ydata(1)
             self.updateMap(cell_size, threshold, axmap)
-            # fig.canvas.draw_idle()
-            # plt.draw()
 
         sthreshold.on_changed(update)
         scell.on_changed(update)
 
         plt.ioff()
         plt.title('Crime Data MTL')
+
+        # Place a legend above this subplot, expanding itself to
+        # fully use the given bounding box.
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+
         plt.show()
 
     def updateMap(self, step_size, threshold, axmap):
@@ -97,11 +95,13 @@ class CrimeMap:
         # use matplotlib hist2d function to plot grid with given step size and threshold value
         crime_map = axmap.hist2d(self.x_values, self.y_values, bins=grid_dimensions, cmap=self.cmap, norm=grid_norm)
 
+        # update the tick values and # of crimes per cell
         self.crimes_per_cell = np.array(crime_map[0])
         self.grid_x_ticks = np.array(crime_map[1])
         self.grid_y_ticks = np.array(crime_map[2])
 
         self.generateCrimeMapDataForEachCell(step_size, axmap)
+        self.displayStDevAndMean(axmap)
 
     def calcGridDimensions(self, step_size):
         # get the bounds of the whole crime area
@@ -117,13 +117,14 @@ class CrimeMap:
         return [int(x_grid_steps), int(y_grid_steps)]
 
     def generateCrimeMapDataForEachCell(self, step_size, axmap):
-
+        # make sure to remove old cell labels before updating
         if len(self.grid_text) > 0:
             for t in range(0, len(self.grid_text)):
                 self.grid_text[t].remove()
                 self.grid_text[t] = None
             self.grid_text = []
 
+        # display crime per grid cell in UI
         for x in range(0, len(self.grid_x_ticks) - 1):
             for y in range(0, len(self.grid_y_ticks) - 1):
                 curr_cell_val = self.crimes_per_cell[x][y]
@@ -134,7 +135,21 @@ class CrimeMap:
                 text = axmap.text(margin_horizontal, margin_vertical, display_val, fontdict=dict(fontsize=3, ha='center', va='center'))
                 self.grid_text.append(text)
 
+    def displayStDevAndMean(self, axmap):
+        stdev = self.crimes_per_cell.std()
+        mean = self.crimes_per_cell.mean()
+        median = np.median(self.crimes_per_cell)
+        textstr = '\n'.join((
+            r'$\mu=%.2f$' % (mean,),
+            r'$\mathrm{median}=%.2f$' % (median,),
+            r'$\sigma=%.2f$' % (stdev,)))
+
+        # these are matplotlib.patch.Patch properties
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+
+        # place a text box in upper left in axes coords
+        axmap.text(-5, -5, textstr, fontsize=14, verticalalignment='bottom', bbox=props)
 
 
-crime_map = CrimeMap()
-crime_map.plotCrimeMap()
+crimes_map = CrimeMap()
+crimes_map.plotCrimeMap()
