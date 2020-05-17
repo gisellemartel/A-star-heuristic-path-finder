@@ -8,8 +8,13 @@ import geopandas as gpd
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
-from matplotlib.widgets import Slider, Button, RadioButtons
+from matplotlib.widgets import Slider, Button
 import numpy as np
+
+
+class AStar:
+    def __init__(self):
+        print()
 
 
 class CrimeMap:
@@ -62,7 +67,7 @@ class CrimeMap:
         self.updateMap()
 
         # sliders to change threshold and cell size interactively and button to toggle data view
-        sthreshold = Slider(axthreshold, 'Threshold %', 0, 100, valinit=50, valstep=5, valfmt='%0.0f')
+        sthreshold = Slider(axthreshold, 'Threshold %', 0, 100, valinit=50, valstep=1, valfmt='%0.0f')
         scell = Slider(axcell, 'Cell Size', 0.001, 0.005, valinit=0.002, valstep=0.001, valfmt='%0.3f')
         btoggle = Button(axtoggle, 'hide/show\ndata')
         sthreshold.label.set_fontsize(8)
@@ -108,7 +113,16 @@ class CrimeMap:
         grid_norm = BoundaryNorm([threshold_val], ncolors=self.cmap.N)
 
         # use matplotlib hist2d function to plot grid with given step size and threshold value
-        crime_map = self.axmap.hist2d(self.x_values, self.y_values, bins=grid_dimensions, cmap=self.cmap, norm=grid_norm)
+        crime_map = self.axmap.hist2d(
+            self.x_values,
+            self.y_values,
+            bins=grid_dimensions,
+            cmap=self.cmap,
+            norm=grid_norm
+            )
+        padding = .002
+        plt.xlim(self.total_bounds[0]-padding, self.total_bounds[2]+padding)
+        plt.ylim(self.total_bounds[1]-padding, self.total_bounds[3]+padding)
 
         # update the tick values and # of crimes per cell
         self.crimes_per_cell = np.array(crime_map[0])
