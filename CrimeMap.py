@@ -12,13 +12,6 @@ from matplotlib.widgets import Slider, Button
 import numpy as np
 
 
-# class AStar:
-#     def __init__(self, start_point, end_point):
-#         self.start_point = start_point
-#         self.end_point = end_point
-#         print()
-
-
 class CrimeMap:
 
     def __init__(self):
@@ -50,8 +43,7 @@ class CrimeMap:
         self.axmap = None
         self.show_data = True
 
-        self.start_point = [self.total_bounds[0], self.total_bounds[1]]
-        self.end_point = [self.total_bounds[2], self.total_bounds[3]]
+        self.threshold_val = 0
 
     def onPressDataToggle(self, event):
         self.show_data = not self.show_data
@@ -61,7 +53,6 @@ class CrimeMap:
         plt.ion()
         plt.rcParams.update({'figure.dpi': 200, 'font.size': 5})
         matplotlib.use("TkAgg")
-
         # set layout of figures
         axthreshold = plt.axes([0.2, 0.05, 0.5, 0.03])
         axcell = plt.axes([0.2, 0.1, 0.5, 0.03])
@@ -86,14 +77,6 @@ class CrimeMap:
         sthreshold.on_changed(update)
         scell.on_changed(update)
         btoggle.on_clicked(self.onPressDataToggle)
-
-        self.axmap.annotate("",
-              xy=(self.start_point[0], self.start_point[1]), xycoords='data',
-              xytext=(self.end_point[0], self.end_point[1]), textcoords='data',
-              arrowprops=dict(arrowstyle="-",
-                              connectionstyle="arc3,rad=0."),
-                            )
-
         plt.ioff()
         plt.show()
 
@@ -111,16 +94,15 @@ class CrimeMap:
         # and calculate the threshold_val based on the sorted list of # crimes
         # for example, if array = [0, 3, 5, 9] and threshold percentage is 50%
         # then the index would be 4 * 0.5 - 1 = 1 and the value would be 3
-        threshold_val = 0
         if self.threshold < 100:
             threshold_index = int(len(crimes_per_cell_sorted) * (1 - self.threshold * 0.01)) - 1
-            threshold_val = crimes_per_cell_sorted[threshold_index]
+            self.threshold_val = crimes_per_cell_sorted[threshold_index]
         else:
             threshold_index = 0
-            threshold_val = crimes_per_cell_sorted[threshold_index] + 1
+            self.threshold_val = crimes_per_cell_sorted[threshold_index] + 1
 
         # determine the norm of the grid based on the threshhold value
-        grid_norm = BoundaryNorm([threshold_val], ncolors=self.cmap.N)
+        grid_norm = BoundaryNorm([self.threshold_val], ncolors=self.cmap.N)
 
         # use matplotlib hist2d function to plot grid with given step size and threshold value
         crime_map = self.axmap.hist2d(
@@ -141,7 +123,7 @@ class CrimeMap:
 
         if self.show_data:
             self.setGridDisplayData()
-        self.displayStDevAndMean(threshold_val)
+        self.displayStDevAndMean()
 
     def calcGridDimensions(self):
         # get the bounds of the whole crime area
@@ -175,27 +157,78 @@ class CrimeMap:
                                       fontdict=dict(fontsize=3, ha='center', va='center'))
                     self.grid_display_text.append(text)
 
-    def displayStDevAndMean(self, threshold_val):
+    def displayStDevAndMean(self):
         stdev = self.crimes_per_cell.std()
         mean = self.crimes_per_cell.mean()
         median = np.median(self.crimes_per_cell)
         textstr = ' '.join((
             r'$\mu=%.2f$' % (mean,),
             r'$\sigma=%.2f$' % (stdev,),
-            r'$threshold\ value=%.0f$ ' % threshold_val))
+            r'$threshold\ value=%.0f$ ' % self.threshold_val))
 
         # display info
         plt.title(textstr, fontsize=8)
 
-    # def aStarSearch(self):
-        # x = np.linspace(self.start_point[0], self.start_point[1])
-        # y = np.linspace(self.end_point[0], self.end_point[1])
-        # plt.plot(x, y, color='k')
+    def promptUserToSpecifyPoints(self):
+        #TODO: add logic to prompt user for start and end point in CLI
+        start_point = [-73.59, self.grid_y_ticks[1] + 0.0024]
+        end_point = [self.total_bounds[2], self.total_bounds[3]]
+        self.aStarSearch(start_point, end_point)
+
+    def aStarSearch(self, start_point, end_point):
+        start_pos = self.findPosOnGridFromPoint(start_point)
+        end_pos = self.findPosOnGridFromPoint(end_point)
+
+        if start_pos[0] == -1 or start_pos[1] == -1 or end_pos[0] == -1 or end_pos[1] == -1:
+            print('Invalid value given, point found outside of boundaries of map!')
+            # self.promptUserToSpecifyPoints()
+
+        print(start_pos)
+        print(end_pos)
+
+        open_list = []
+        closed_list = []
+
+        open_list.append(start_point)
+        self.axmap.annotate("",
+                            xy=(start_point[0], start_point[1]), xycoords='data',
+                            xytext=(end_point[0], end_point[1]), textcoords='data',
+                            arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
+        self.axmap.draw()
+
+    def findPosOnGridFromPoint(self, point):
+        x = point[0]
+        y = point[1]
+        start_pos_x = 0
+        start_pos_y = 0
+
+        if self.grid_x_ticks[0] > x or x > self.grid_x_ticks[len(self.grid_x_ticks) - 1]:
+            start_pos_x = -1
+        if self.grid_y_ticks[0] > y or y > self.grid_y_ticks[len(self.grid_y_ticks) - 1]:
+            start_pos_y = -1
+        # if user selects point that is not grid tick, it will select the tick to the left of the point on x-axis
+        for i in range(0, len(self.grid_x_ticks) - 1):
+            if self.grid_x_ticks[i] == x:
+                start_pos_x = i
+            if self.grid_x_ticks[i] > x:
+                print(i - 1)
+                start_pos_x = i - 1
+                break
+        # if user selects point that is not grid tick, it will select the tick below the point on the y-axis
+        for i in range(0, len(self.grid_y_ticks) - 1):
+            if self.grid_y_ticks[i] == y:
+                start_pos_y = i
+            if self.grid_y_ticks[i] > y:
+                print(i - 1)
+                start_pos_y = i - 1
+                break
+
+        return [start_pos_x, start_pos_y]
 
 
 crimes_map = CrimeMap()
 crimes_map.plotCrimeMap()
-# crimes_map.aStarSearch()
+crimes_map.promptUserToSpecifyPoints()
 
 
 # a_star_search = AStar(crimes_map.start_point, crimes_map.end_point)
