@@ -170,10 +170,39 @@ class CrimeMap:
         plt.title(textstr, fontsize=8)
 
     def promptUserToSpecifyPoints(self):
-        #TODO: add logic to prompt user for start and end point in CLI
-        start_point = [-73.59, self.grid_y_ticks[1] + 0.0024]
-        end_point = [self.total_bounds[2], self.total_bounds[3]]
-        self.aStarSearch(start_point, end_point)
+        print('GRID BOUNDS\nxmin: ' + str(self.total_bounds[0]) + '\n'
+              + 'xmax: ' + str(self.total_bounds[2]) + '\n'
+              + 'ymin: ' + str(self.total_bounds[1]) + '\n'
+              + 'ymax: ' + str(self.total_bounds[3]) + '\n')
+        while True:
+            start_x = float(input('Please enter the x-coordinate of your starting point'))
+            if start_x < self.total_bounds[0] or start_x > self.total_bounds[2]:
+                print('Coordinate is out of bounds, please try again')
+            else:
+                break
+
+        while True:
+            start_y = float(input('Please enter the y-coordinate of your starting point'))
+            if start_y < self.total_bounds[1] or start_y > self.total_bounds[3]:
+                print('Coordinate is out of bounds, please try again')
+            else:
+                break
+
+        while True:
+            end_x = float(input('Please enter the x-coordinate of your end point'))
+            if end_x < self.total_bounds[0] or end_x > self.total_bounds[2]:
+                print('Coordinate is out of bounds, please try again')
+            else:
+                break
+
+        while True:
+            end_y = float(input('Please enter the y-coordinate of your end point'))
+            if end_y < self.total_bounds[1] or end_y > self.total_bounds[3]:
+                print('Coordinate is out of bounds, please try again')
+            else:
+                break
+
+        self.aStarSearch([start_x, start_y], [end_x, end_y])
 
     def aStarSearch(self, start_point, end_point):
         start_pos = self.findPosOnGridFromPoint(start_point)
@@ -194,7 +223,11 @@ class CrimeMap:
                             xy=(start_point[0], start_point[1]), xycoords='data',
                             xytext=(end_point[0], end_point[1]), textcoords='data',
                             arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
-        self.axmap.draw()
+
+        search_again = input('Would you like to conduct another search? Enter \'y\'')
+
+        if search_again == 'y':
+            self.promptUserToSpecifyPoints()
 
     def findPosOnGridFromPoint(self, point):
         x = point[0]
