@@ -12,9 +12,11 @@ from matplotlib.widgets import Slider, Button
 import numpy as np
 
 
-class AStar:
-    def __init__(self):
-        print()
+# class AStar:
+#     def __init__(self, start_point, end_point):
+#         self.start_point = start_point
+#         self.end_point = end_point
+#         print()
 
 
 class CrimeMap:
@@ -46,8 +48,10 @@ class CrimeMap:
         self.threshold = 50
 
         self.axmap = None
-
         self.show_data = True
+
+        self.start_point = [self.total_bounds[0], self.total_bounds[1]]
+        self.end_point = [self.total_bounds[2], self.total_bounds[3]]
 
     def onPressDataToggle(self, event):
         self.show_data = not self.show_data
@@ -83,8 +87,14 @@ class CrimeMap:
         scell.on_changed(update)
         btoggle.on_clicked(self.onPressDataToggle)
 
-        plt.ioff()
+        self.axmap.annotate("",
+              xy=(self.start_point[0], self.start_point[1]), xycoords='data',
+              xytext=(self.end_point[0], self.end_point[1]), textcoords='data',
+              arrowprops=dict(arrowstyle="-",
+                              connectionstyle="arc3,rad=0."),
+                            )
 
+        plt.ioff()
         plt.show()
 
     def updateMap(self):
@@ -172,10 +182,20 @@ class CrimeMap:
         textstr = ' '.join((
             r'$\mu=%.2f$' % (mean,),
             r'$\sigma=%.2f$' % (stdev,),
-            r'$threshold val=%.0f$ ' % threshold_val))
+            r'$threshold\ value=%.0f$ ' % threshold_val))
 
         # display info
         plt.title(textstr, fontsize=8)
 
+    # def aStarSearch(self):
+        # x = np.linspace(self.start_point[0], self.start_point[1])
+        # y = np.linspace(self.end_point[0], self.end_point[1])
+        # plt.plot(x, y, color='k')
+
+
 crimes_map = CrimeMap()
 crimes_map.plotCrimeMap()
+# crimes_map.aStarSearch()
+
+
+# a_star_search = AStar(crimes_map.start_point, crimes_map.end_point)
