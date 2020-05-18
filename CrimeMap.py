@@ -12,6 +12,47 @@ from matplotlib.widgets import Slider, Button
 import numpy as np
 
 
+#TODO: When parsing info from file, make grid object containing every point (tick) on grid
+# this will be used by A*
+class Cell:
+    def __init__(self):
+        self.vertices = [Point(), Point(), Point(), Point()]
+        self.is_obstruction = False
+        self.num_crimes = 0
+
+    def display(self):
+        print('\ncell vertices')
+        for v in self.vertices:
+            v.display()
+
+        print('\nis_obstruction: ' + self.is_obstruction)
+        print('\nnum_crimes: ' + self.num_crimes)
+
+
+class Point:
+    def __init__(self):
+        self.grid_pos = [0, 0]
+        self.lat_long = [-73.58, 45.51]
+        self.adjacent_point = []
+        self.adjacent_cells = []
+        self.h = 0
+        self.g = 0
+        self.f = 0
+
+    def display(self):
+        print('adjacent_nodes')
+        for node in self.adjacent_nodes:
+            node.display()
+
+        print('adjacent_cells')
+        for cell in self.adjacent_cells:
+            cell.display()
+
+        print('h:' + str(self.h))
+        print('\ng:' + str(self.g))
+        print('\nf:' + str(self.f))
+
+
 class CrimeMap:
 
     def __init__(self):
@@ -218,11 +259,16 @@ class CrimeMap:
         open_list = []
         closed_list = []
 
-        open_list.append(start_point)
-        self.axmap.annotate("",
-                            xy=(start_point[0], start_point[1]), xycoords='data',
-                            xytext=(end_point[0], end_point[1]), textcoords='data',
-                            arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
+        open_list.append(start_pos)
+
+
+
+
+
+        # self.axmap.annotate("",
+        #                     xy=(start_point[0], start_point[1]), xycoords='data',
+        #                     xytext=(end_point[0], end_point[1]), textcoords='data',
+        #                     arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
 
         search_again = input('Would you like to conduct another search? Enter \'y\'')
 
