@@ -28,13 +28,13 @@ class Cell:
                and self.num_crimes == cell.num_crimes
 
     def display(self):
-        print('\ncell vertices')
-        for v in self.vertices:
-            points = v.grid_pos
-            print(points)
-        for v in self.vertices:
-            points = v.lat_long
-            print(points)
+        # print('\ncell vertices')
+        # for v in self.vertices:
+        #     points = v.grid_pos
+        #     print(points)
+        # for v in self.vertices:
+        #     points = v.lat_long
+        #     print(points)
 
         print('is_high_crime_area: ' + str(self.is_high_crime_area))
         print('num_crimes: ' + str(self.num_crimes))
@@ -250,25 +250,23 @@ class CrimeMap:
             self.nodes[idx].addAdjacentCell(cell)
 
     def parseNodes(self):
-        for node in self.nodes:
-            # check each adjacent cell to the current node
-            for cell in node.adjacent_cells:
-                # if the cell is high crime, then we cannot cross it diagonally
-                if cell.is_high_crime_area:
-                    continue
-                for vertex in cell.vertices:
-                    if vertex == node:
-                        continue
-                    x, y = vertex.grid_pos
 
-                    # adjacent node which is non-diagonal has highest-priority
-                    if x == node.grid_pos[0] or y == node.grid_pos[1]:
-                        heapq.heappush(node.adjacent_nodes, (1, vertex))
-                    else:
-                        heapq.heappush(node.adjacent_nodes, (1.5, vertex))
+        for i in self.nodes:
+            cells = self.nodes[i].adjacent_cells
 
-            while node.adjacent_nodes:
-                print(heapq.heappop(node.adjacent_nodes))
+            # node is one of 4 grid corners
+            if len(cells) == 1:
+                print('Corner Node')
+
+            # node is a non-corner boundary node
+            elif len(cells) == 2:
+                pass
+
+            # non-boundary node
+            elif len(cells) == 4:
+                pass
+
+
 
     def parseCrimeMap(self, crime_map):
         self.cells = []
@@ -318,6 +316,7 @@ class CrimeMap:
 
                 max_num_nodes = len(crime_map[1])*len(crime_map[2])
 
+                # add nodes to nodes dictionary
                 if pos1 not in self.nodes and pos1 < max_num_nodes:
                     self.nodes[pos1] = p1
                 if pos2 not in self.nodes and pos2 < max_num_nodes:
@@ -337,6 +336,7 @@ class CrimeMap:
                     else:
                         cell = Cell(p1, p2, p3, p4, i, j, False, num_crimes)
 
+                    # add the newly created cell object to adjacency list of each of its vertices (nodes)
                     self.addAdjacentCellToNode(pos1, cell)
                     self.addAdjacentCellToNode(pos2, cell)
                     self.addAdjacentCellToNode(pos3, cell)
@@ -351,7 +351,7 @@ class CrimeMap:
         # for node in self.nodes:
         #     self.nodes[node].display()
 
-        # self.parseNodes()
+        self.parseNodes()
 
 
     def updateMap(self):
