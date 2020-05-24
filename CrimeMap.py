@@ -54,6 +54,19 @@ class Node:
         print('\nf:' + str(self.f))
 
 
+def findPositionOfTick(grid_ticks, p):
+    # if user selects point that is not grid tick, it will select the tick to the left of the point on x-axis
+    for i in range(0, len(grid_ticks) - 1):
+        if grid_ticks[i] == p:
+            return i
+        if grid_ticks[i] > p:
+            # print(i - 1)
+            if i - 1 > 0:
+                return i - 1
+            else:
+                return i
+
+
 class CrimeMap:
 
     def __init__(self):
@@ -69,7 +82,7 @@ class CrimeMap:
         self.y_values = [point.y for point in self.crime_points]
 
         # generate a color map to represent the crime areas
-        self.cmap = matplotlib.colors.LinearSegmentedColormap.from_list('Crime Points MTL', ['purple', 'yellow'])
+        self.cmap = matplotlib.colors.LinearSegmentedColormap.from_list('Crime Points MTL', ['white', 'orange'])
 
         # get the bounds of the crime map from shapefile data
         self.total_bounds = self.data.total_bounds
@@ -118,51 +131,77 @@ class CrimeMap:
         def update(val):
             self.threshold = sthreshold.val
             self.step_size = scell.val
+            self.start = -1
+            self.goal = -1
+            self.clearPointsOnMap()
             self.updateMap()
 
         sthreshold.on_changed(update)
         scell.on_changed(update)
         btoggle.on_clicked(self.onPressDataToggle)
         plt.ioff()
-        self.axmap.set_picker(self.on_pick_map_coordinate)
+        self.axmap.set_picker(self.onPickMapCoordinate)
 
         plt.show()
 
-    def on_pick_map_coordinate(self, artist, mouseevent):
+    def drawPointOnMap(self, i, j, symbol, color):
+        x_node = self.grid_x_ticks[i]
+        y_node = self.grid_y_ticks[j]
+        start = self.axmap.text(x_node, y_node, symbol, fontdict=dict(fontsize=8, ha='center', va='center', color=color))
+        self.gridXMarkings.append(start)
+        plt.draw()
+
+    def clearPointsOnMap(self):
+        for marking in self.gridXMarkings:
+            marking.remove()
+            marking = None
+        self.gridXMarkings = []
+
+    def onPickMapCoordinate(self, artist, mouseevent):
         # get the point the user selected on grid
         x, y = mouseevent.xdata, mouseevent.ydata
+
+        # if the user selected invalid area outside bounds of grid
+        if x is None or y is None \
+                or x < self.total_bounds[0] or x > self.total_bounds[2] \
+                or y < self.total_bounds[1] or y > self.total_bounds[3]:
+            self.clearPointsOnMap()
 
         # if the start point is not set
         if self.start == -1:
             self.start = self.findPosOnGridFromPoint([x, y])
-            x_node = self.grid_x_ticks[self.start[0]]
-            y_node = self.grid_y_ticks[self.start[1]]
-            start = self.axmap.text(x_node, y_node, 'X', fontdict=dict(fontsize=8, ha='center', va='center', color='r'))
-            self.gridXMarkings.append(start)
-            plt.draw()
+            # if the selected point was somehow invalid, clear markers and do nothing
+            if self.start[0] == -1 or self.start[1] == -1:
+                self.start = -1
+                self.clearPointsOnMap()
+            else:
+                self.drawPointOnMap(self.start[0], self.start[1], 'O', 'r')
+
         # if the start point is set but not the destination
         elif self.start != -1 and self.goal == -1:
             # set the destination and then conduct AStarSearch
             self.goal = self.findPosOnGridFromPoint([x, y])
-            x_node = self.grid_x_ticks[self.goal[0]]
-            y_node = self.grid_y_ticks[self.goal[1]]
-            end = self.axmap.text(x_node, y_node, 'X', fontdict=dict(fontsize=8, ha='center', va='center', color='g'))
-            self.gridXMarkings.append(end)
-            plt.draw()
-            self.aStarSearch()
+            # if the selected point was somehow invalid, clear markers and do nothing
+            if self.goal[0] == -1 or self.goal[1] == -1:
+                self.goal = -1
+            # if the user chose same end point as start point, then do nothing
+            elif self.start == self.goal:
+                self.goal = -1
+            else:
+                self.drawPointOnMap(self.goal[0], self.goal[1], 'X', 'g')
+                # call the AStarSearch on the start and goal points
+                self.aStarSearch()
+
         # user is conducting new search
         else:
-            for marking in self.gridXMarkings:
-                marking.remove()
-                marking = None
-            self.gridXMarkings = []
-            self.start = self.findPosOnGridFromPoint([x, y])
+            self.clearPointsOnMap()
             self.goal = -1
-            x_node = self.grid_x_ticks[self.start[0]]
-            y_node = self.grid_y_ticks[self.start[1]]
-            start = self.axmap.text(x_node, y_node, 'X', fontdict=dict(fontsize=8, ha='center', va='center', color='r'))
-            self.gridXMarkings.append(start)
-            plt.draw()
+            self.start = self.findPosOnGridFromPoint([x, y])
+            # if the selected point was somehow invalid, clear markers and do nothing
+            if self.start[0] == -1 or self.start[1] == -1:
+                self.start = -1
+            else:
+                self.drawPointOnMap(self.start[0], self.start[1], 'O', 'r')
 
         print(self.start)
         print(self.goal)
@@ -254,11 +293,29 @@ class CrimeMap:
     def displayStDevAndMean(self):
         stdev = self.crimes_per_cell.std()
         mean = self.crimes_per_cell.mean()
-        median = np.median(self.crimes_per_cell)
+
+        if self.start != -1:
+            x1 = '%.3f' % self.grid_x_ticks[self.start[0]]
+            y1 = '%.3f' % self.grid_y_ticks[self.start[1]]
+            start = 'start: (' + str(x1) + ',' + str(y1) + ')'
+        else:
+            start = ''
+
+        if self.goal != -1:
+            x2 = '%.3f' % self.grid_x_ticks[self.goal[0]]
+            y2 = '%.3f' % self.grid_y_ticks[self.goal[1]]
+            end = 'goal: (' + str(x2) + ',' + str(y2) + ')'
+        else:
+            end = ''
+
         textstr = ' '.join((
             r'$\mu=%.2f$' % (mean,),
             r'$\sigma=%.2f$' % (stdev,),
-            r'$threshold\ value=%.0f$ ' % self.threshold_val))
+            r'$threshold\ value=%.0f$ ' % (self.threshold_val,),
+            start,
+            end,
+        ))
+
 
         # display info
         plt.title(textstr, fontsize=8)
@@ -266,39 +323,32 @@ class CrimeMap:
     def findPosOnGridFromPoint(self, point):
         x = point[0]
         y = point[1]
-        start_pos_x = 0
-        start_pos_y = 0
 
+        if x is None or y is None:
+            return [-1, -1]
         if self.grid_x_ticks[0] > x or x > self.grid_x_ticks[len(self.grid_x_ticks) - 1]:
-            start_pos_x = -1
+            return [-1, -1]
         if self.grid_y_ticks[0] > y or y > self.grid_y_ticks[len(self.grid_y_ticks) - 1]:
-            start_pos_y = -1
-        # if user selects point that is not grid tick, it will select the tick to the left of the point on x-axis
-        for i in range(0, len(self.grid_x_ticks) - 1):
-            if self.grid_x_ticks[i] == x:
-                start_pos_x = i
-            if self.grid_x_ticks[i] > x:
-                print(i - 1)
-                start_pos_x = i - 1
-                break
-        # if user selects point that is not grid tick, it will select the tick below the point on the y-axis
-        for i in range(0, len(self.grid_y_ticks) - 1):
-            if self.grid_y_ticks[i] == y:
-                start_pos_y = i
-            if self.grid_y_ticks[i] > y:
-                print(i - 1)
-                start_pos_y = i - 1
-                break
+            return [-1, -1]
 
-        return [start_pos_x, start_pos_y]
+        # if user selects point that is not grid tick, it will select the tick to the left of the point on x-axis
+        x_pos = findPositionOfTick(self.grid_x_ticks, x)
+
+        # if user selects point that is not grid tick, it will select the tick below the point on the y-axis
+        y_pos = findPositionOfTick(self.grid_y_ticks, y)
+
+        return [x_pos, y_pos]
 
     def aStarSearch(self):
 
-        # if start_pos[0] == -1 or start_pos[1] == -1 or end_pos[0] == -1 or end_pos[1] == -1:
-        #     print('Invalid value given, point found outside of boundaries of map!')
+        if self.start[0] == -1 or self.start[1] == -1 or self.goal[0] == -1 or self.goal[1] == -1:
+            print('Invalid value given, point found outside of boundaries of map!')
+            return
 
         print(self.start)
         print(self.goal)
+        plt.title('Initiating A* search...', fontsize=8)
+
 
         open_list = []
         closed_list = []
@@ -307,11 +357,14 @@ class CrimeMap:
         open_list.append(self.start)
 
 
-        # self.axmap.annotate("",
-        #                     xy=(start_point[0], start_point[1]), xycoords='data',
-        #                     xytext=(end_point[0], end_point[1]), textcoords='data',
-        #                     arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
+        self.axmap.annotate("",
+                            xy=(self.start[0], self.start[1]), xycoords='data',
+                            xytext=(self.goal[0], self.goal[1]), textcoords='data',
+                            arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
+        plt.draw()
 
+        plt.title('Search Done!', fontsize=8)
+        self.displayStDevAndMean()
 
 def main():
     crimes_map = CrimeMap()
