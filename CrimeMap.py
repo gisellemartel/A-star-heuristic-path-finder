@@ -11,18 +11,14 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.widgets import Slider, Button
 import matplotlib.ticker as tkr
 import numpy as np
-
+import heapq
 
 #TODO: When parsing info from file, make grid object containing every point (tick) on grid
 # this will be used by A*
-class PriorityQueue:
-    def __init__(self, head):
-        nodes = [head]
-
-
 class Cell:
-    def __init__(self, p1, p2, p3, p4, is_high_crime_area, num_crimes):
+    def __init__(self, p1, p2, p3, p4, x_pos, y_pos, is_high_crime_area, num_crimes):
         self.vertices = [p1, p2, p3, p4]
+        self.grid_pos = [x_pos, y_pos]
         self.is_high_crime_area = is_high_crime_area
         self.num_crimes = num_crimes
 
@@ -57,8 +53,8 @@ class Node:
     def __eq__(self, node):
         return self.grid_pos == node.grid_pos
 
-    def addAdjacentNode(self, node):
-        self.adjacent_nodes.append(node)
+    def __lt__(self, node):
+        return self.name < node.name
 
     def addAdjacentCell(self, cell):
         self.adjacent_cells.append(cell)
@@ -123,7 +119,7 @@ class CrimeMap:
         self.grid_x_ticks = []
         self.grid_y_ticks = []
 
-        self.step_size = 0.002
+        self.step_size = 0.005
         self.threshold = 50
 
         self.axmap = None
@@ -137,7 +133,7 @@ class CrimeMap:
 
         # data to be used by A*
         self.cells = []
-        self.nodes = []
+        self.nodes = {}
 
     def onPressDataToggle(self, event):
         self.show_data = not self.show_data
@@ -240,9 +236,43 @@ class CrimeMap:
 
         return True, {}
 
+    def addAdjacentCellToNode(self, idx, cell):
+        # add the cells that are next to a node
+        # | - - - - | - - - - |
+        # |     1   |    2    |
+        # |         |         |
+        # | - - - - N - - - - |
+        # |    3    |    4    |
+        # |         |         |
+        # | - - - - | - - - - |
+        #
+        if idx in self.nodes:
+            self.nodes[idx].addAdjacentCell(cell)
+
+    def parseNodes(self):
+        for node in self.nodes:
+            # check each adjacent cell to the current node
+            for cell in node.adjacent_cells:
+                # if the cell is high crime, then we cannot cross it diagonally
+                if cell.is_high_crime_area:
+                    continue
+                for vertex in cell.vertices:
+                    if vertex == node:
+                        continue
+                    x, y = vertex.grid_pos
+
+                    # adjacent node which is non-diagonal has highest-priority
+                    if x == node.grid_pos[0] or y == node.grid_pos[1]:
+                        heapq.heappush(node.adjacent_nodes, (1, vertex))
+                    else:
+                        heapq.heappush(node.adjacent_nodes, (1.5, vertex))
+
+            while node.adjacent_nodes:
+                print(heapq.heappop(node.adjacent_nodes))
+
     def parseCrimeMap(self, crime_map):
         self.cells = []
-        self.nodes = []
+        self.nodes = {}
         crimes = crime_map[0]
 
         # create node object for each vertex in grid
@@ -256,49 +286,54 @@ class CrimeMap:
         #
         # p1, p2, p3, p4 represent nodes and the cube represents a cell
         for i in range(0, len(crimes)):
-            for j in range(0, len(crimes[i])):
+            print(i)
+            for j in range(0, len(crimes)):
+                print(j + 1)
                 p1 = Node(i, j, crime_map[1][i], crime_map[2][j])
                 p2 = Node(i + 1, j, crime_map[1][j+1], crime_map[2][j])
                 p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j+1])
                 p4 = Node(i + 1, j + 1, crime_map[1][i+1], crime_map[2][j+1])
 
-                if not isInList(p1, self.nodes):
-                    self.nodes.append(p1)
-                if not isInList(p2, self.nodes):
-                    self.nodes.append(p2)
-                if not isInList(p3, self.nodes):
-                    self.nodes.append(p3)
-                if not isInList(p4, self.nodes):
-                    self.nodes.append(p4)
+                pos1 = i * len(crimes) + j
+                pos2 = (i + 1) * len(crimes) + j
+                pos3 = i * len(crimes) + j + 1
+                pos4 = (i + 1) * len(crimes) + j + 1
+
+                if pos1 not in self.nodes:
+                    self.nodes[pos1] = p1
+                if pos2 not in self.nodes:
+                    self.nodes[pos2] = p2
+                if pos3 not in self.nodes:
+                    self.nodes[pos3] = p3
+                if pos4 not in self.nodes:
+                    self.nodes[pos4] = p4
 
                 if j < len(crimes[i]) and i < len(crimes[i]):
                     num_crimes = crime_map[0][i][j]
 
                 # determine if the cell is an obstruction if it has crimes that meet or exceed threshold
                 if num_crimes >= self.threshold_val:
-                    cell = Cell(p1, p2, p3, p4, True, num_crimes)
-                    self.cells.append(cell)
-                    p1.addAdjacentCell(cell)
-                    p2.addAdjacentCell(cell)
-                    p3.addAdjacentCell(cell)
-                    p4.addAdjacentCell(cell)
+                    cell = Cell(p1, p2, p3, p4, i, j, True, num_crimes)
                 else:
-                    cell = Cell(p1, p2, p3, p4, False, num_crimes)
-                    self.cells.append(cell)
-                    p1.addAdjacentCell(cell)
-                    p2.addAdjacentCell(cell)
-                    p3.addAdjacentCell(cell)
-                    p4.addAdjacentCell(cell)
+                    cell = Cell(p1, p2, p3, p4, i, j, False, num_crimes)
+
+                self.addAdjacentCellToNode(pos1, cell)
+                self.addAdjacentCellToNode(pos2, cell)
+                self.addAdjacentCellToNode(pos3, cell)
+                self.addAdjacentCellToNode(pos4, cell)
+
+                self.cells.append(cell)
+            print
 
         # debug
         # for cell in self.cells:
         #     cell.display()
-
+        #
         # for node in self.nodes:
-        #     node.display()
+        #     self.nodes[node].display()
 
-        for node in self.nodes:
-            
+        # self.parseNodes()
+
 
     def updateMap(self):
         # get the horizontal-vertical size of grid (X*Y)
@@ -525,8 +560,8 @@ class CrimeMap:
             #
             #     # Create the f, g, and h values
             #     child.g = current_node.g + 1
-            #     child.h = ((child.position[0] - goal_node.position[0]) ** 2) + (
-            #                 (child.position[1] - goal_node.position[1]) ** 2)
+            #     child.h = ((child.grid_pos[0] - goal_node.grid_pos[0]) ** 2) + (
+            #                 (child.grid_pos[1] - goal_node.grid_pos[1]) ** 2)
             #     child.f = child.g + child.h
             #
             #     # Child is already in the open list
