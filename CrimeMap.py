@@ -87,8 +87,9 @@ class CrimeMap:
 
         self.threshold_val = 0
 
-        self.state = -1
+        self.start = -1
         self.goal = -1
+        self.gridXMarkings = []
 
     def onPressDataToggle(self, event):
         self.show_data = not self.show_data
@@ -123,23 +124,47 @@ class CrimeMap:
         scell.on_changed(update)
         btoggle.on_clicked(self.onPressDataToggle)
         plt.ioff()
-        self.axmap.set_picker(self.on_pick)
+        self.axmap.set_picker(self.on_pick_map_coordinate)
 
         plt.show()
 
-    def on_pick(self, artist, mouseevent):
+    def on_pick_map_coordinate(self, artist, mouseevent):
+        # get the point the user selected on grid
         x, y = mouseevent.xdata, mouseevent.ydata
 
-        if self.state == -1:
-            self.state = [x, y]
-        elif self.state != -1 and self.goal == -1:
-            self.goal = [x, y]
+        # if the start point is not set
+        if self.start == -1:
+            self.start = self.findPosOnGridFromPoint([x, y])
+            x_node = self.grid_x_ticks[self.start[0]]
+            y_node = self.grid_y_ticks[self.start[1]]
+            start = self.axmap.text(x_node, y_node, 'X', fontdict=dict(fontsize=8, ha='center', va='center', color='r'))
+            self.gridXMarkings.append(start)
+            plt.draw()
+        # if the start point is set but not the destination
+        elif self.start != -1 and self.goal == -1:
+            # set the destination and then conduct AStarSearch
+            self.goal = self.findPosOnGridFromPoint([x, y])
+            x_node = self.grid_x_ticks[self.goal[0]]
+            y_node = self.grid_y_ticks[self.goal[1]]
+            end = self.axmap.text(x_node, y_node, 'X', fontdict=dict(fontsize=8, ha='center', va='center', color='g'))
+            self.gridXMarkings.append(end)
+            plt.draw()
             self.aStarSearch()
+        # user is conducting new search
         else:
-            self.state = [x,y]
+            for marking in self.gridXMarkings:
+                marking.remove()
+                marking = None
+            self.gridXMarkings = []
+            self.start = self.findPosOnGridFromPoint([x, y])
             self.goal = -1
+            x_node = self.grid_x_ticks[self.start[0]]
+            y_node = self.grid_y_ticks[self.start[1]]
+            start = self.axmap.text(x_node, y_node, 'X', fontdict=dict(fontsize=8, ha='center', va='center', color='r'))
+            self.gridXMarkings.append(start)
+            plt.draw()
 
-        print(self.state)
+        print(self.start)
         print(self.goal)
 
         return True, {}
@@ -237,27 +262,6 @@ class CrimeMap:
 
         # display info
         plt.title(textstr, fontsize=8)
-    #
-    # def userInputHandler(self, i, j, msg):
-    #     while True:
-    #         point = float(input(msg))
-    #         if point < self.total_bounds[i] or point > self.total_bounds[j]:
-    #             print('Coordinate is out of bounds, please try again')
-    #         else:
-    #             break
-    #     return point
-    #
-    # def promptUserToSpecifyPoints(self):
-    #     print('GRID BOUNDS\nxmin: ' + str(self.total_bounds[0]) + '\n'
-    #           + 'xmax: ' + str(self.total_bounds[2]) + '\n'
-    #           + 'ymin: ' + str(self.total_bounds[1]) + '\n'
-    #           + 'ymax: ' + str(self.total_bounds[3]) + '\n')
-    #
-    #     start_x = self.userInputHandler(0, 2, 'Please enter the x-coordinate of your starting point')
-    #     start_y = self.userInputHandler(1, 3, 'Please enter the y-coordinate of your starting point')
-    #     end_x = self.userInputHandler(0, 2, 'Please enter the x-coordinate of your end point')
-    #     end_y = self.userInputHandler(1, 3, 'Please enter the y-coordinate of your end point')
-    #     self.aStarSearch([start_x, start_y], [end_x, end_y])
 
     def findPosOnGridFromPoint(self, point):
         x = point[0]
@@ -289,27 +293,24 @@ class CrimeMap:
         return [start_pos_x, start_pos_y]
 
     def aStarSearch(self):
-        start_pos = self.findPosOnGridFromPoint(self.state)
-        end_pos = self.findPosOnGridFromPoint(self.goal)
 
         # if start_pos[0] == -1 or start_pos[1] == -1 or end_pos[0] == -1 or end_pos[1] == -1:
         #     print('Invalid value given, point found outside of boundaries of map!')
 
-        print(start_pos)
-        print(end_pos)
+        print(self.start)
+        print(self.goal)
 
         open_list = []
         closed_list = []
 
         # add start node to open list
-        open_list.append(start_pos)
+        open_list.append(self.start)
 
 
         # self.axmap.annotate("",
         #                     xy=(start_point[0], start_point[1]), xycoords='data',
         #                     xytext=(end_point[0], end_point[1]), textcoords='data',
         #                     arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
-
 
 
 def main():
