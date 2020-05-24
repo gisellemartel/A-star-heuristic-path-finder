@@ -246,7 +246,7 @@ class CrimeMap:
         # |         |         |
         # | - - - - | - - - - |
         #
-        if idx in self.nodes:
+        if idx in self.nodes and self.nodes[idx] is not None:
             self.nodes[idx].addAdjacentCell(cell)
 
     def parseNodes(self):
@@ -285,45 +285,61 @@ class CrimeMap:
         # p1 - - - p2
         #
         # p1, p2, p3, p4 represent nodes and the cube represents a cell
-        for i in range(0, len(crimes)):
-            print(i)
-            for j in range(0, len(crimes)):
-                print(j + 1)
+        for i in range(0, len(crimes) + 1):
+            for j in range(0, len(crimes) + 1):
+
                 p1 = Node(i, j, crime_map[1][i], crime_map[2][j])
-                p2 = Node(i + 1, j, crime_map[1][j+1], crime_map[2][j])
-                p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j+1])
-                p4 = Node(i + 1, j + 1, crime_map[1][i+1], crime_map[2][j+1])
+
+                if j + 1 < len(crime_map[2]):
+                    p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j + 1])
+                else:
+                    p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j])
+
+                if i + 1 < len(crime_map[1]) and j + 1 < len(crime_map[2]):
+                    p2 = Node(i + 1, j, crime_map[1][i+1], crime_map[2][j])
+                    p4 = Node(i + 1, j + 1, crime_map[1][i+1], crime_map[2][j+1])
+                elif i + 1 < len(crime_map[1]) and j + 1 == len(crime_map[2]):
+                    p2 = Node(i + 1, j, crime_map[1][i + 1], crime_map[2][j])
+                    p4 = Node(i + 1, j + 1, crime_map[1][i + 1], crime_map[2][j])
+                elif i + 1 == len(crime_map[1]) and j + 1 < len(crime_map[2]):
+                    p2 = Node(i + 1, j, crime_map[1][i], crime_map[2][j])
+                    p4 = Node(i + 1, j + 1, crime_map[1][i], crime_map[2][j + 1])
+                else:
+                    p2 = Node(i + 1, j, crime_map[1][i], crime_map[2][j])
+                    p4 = Node(i + 1, j + 1, crime_map[1][i], crime_map[2][j])
 
                 pos1 = i * len(crimes) + j
                 pos2 = (i + 1) * len(crimes) + j
                 pos3 = i * len(crimes) + j + 1
                 pos4 = (i + 1) * len(crimes) + j + 1
 
-                if pos1 not in self.nodes:
+                MAX_NUM_NODES = len(crime_map[1])*len(crime_map[2])
+
+                if pos1 not in self.nodes and pos1 < MAX_NUM_NODES:
                     self.nodes[pos1] = p1
-                if pos2 not in self.nodes:
+                if pos2 not in self.nodes and pos2 < MAX_NUM_NODES:
                     self.nodes[pos2] = p2
-                if pos3 not in self.nodes:
+                if pos3 not in self.nodes and pos3 < MAX_NUM_NODES:
                     self.nodes[pos3] = p3
-                if pos4 not in self.nodes:
+                if pos4 not in self.nodes and pos4 < MAX_NUM_NODES:
                     self.nodes[pos4] = p4
 
-                if j < len(crimes[i]) and i < len(crimes[i]):
-                    num_crimes = crime_map[0][i][j]
+                if i < len(crimes) and j < len(crimes) and j < len(crimes[i]) and i < len(crimes[i]):
+                    num_crimes = crimes[i][j]
 
-                # determine if the cell is an obstruction if it has crimes that meet or exceed threshold
-                if num_crimes >= self.threshold_val:
-                    cell = Cell(p1, p2, p3, p4, i, j, True, num_crimes)
-                else:
-                    cell = Cell(p1, p2, p3, p4, i, j, False, num_crimes)
+                    # determine if the cell is an obstruction if it has crimes that meet or exceed threshold
+                    if num_crimes >= self.threshold_val:
+                        cell = Cell(p1, p2, p3, p4, i, j, True, num_crimes)
+                    else:
+                        cell = Cell(p1, p2, p3, p4, i, j, False, num_crimes)
 
-                self.addAdjacentCellToNode(pos1, cell)
-                self.addAdjacentCellToNode(pos2, cell)
-                self.addAdjacentCellToNode(pos3, cell)
-                self.addAdjacentCellToNode(pos4, cell)
+                    self.addAdjacentCellToNode(pos1, cell)
+                    self.addAdjacentCellToNode(pos2, cell)
+                    self.addAdjacentCellToNode(pos3, cell)
+                    self.addAdjacentCellToNode(pos4, cell)
 
-                self.cells.append(cell)
-            print
+                    self.cells.append(cell)
+        print
 
         # debug
         # for cell in self.cells:
