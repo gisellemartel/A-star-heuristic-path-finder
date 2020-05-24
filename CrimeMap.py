@@ -76,7 +76,7 @@ class Node:
 
 def findPositionOfTick(grid_ticks, p):
     # if user selects point that is not grid tick, it will select the tick to the left of the point on x-axis
-    for i in range(0, len(grid_ticks) - 1):
+    for i in range(0, len(grid_ticks)):
         if grid_ticks[i] == p:
             return i
         if grid_ticks[i] > p:
@@ -119,7 +119,7 @@ class CrimeMap:
         self.grid_x_ticks = []
         self.grid_y_ticks = []
 
-        self.step_size = 0.005
+        self.step_size = 0.002
         self.threshold = 50
 
         self.axmap = None
@@ -370,7 +370,7 @@ class CrimeMap:
 
         self.parseCrimeMap(crime_map)
 
-        padding = .000
+        padding = .001
 
         plt.xlim(self.total_bounds[0]-padding, self.total_bounds[2]+padding)
         plt.ylim(self.total_bounds[1]-padding, self.total_bounds[3]+padding)
