@@ -102,7 +102,7 @@ class CrimeMap:
 
         self.start = -1
         self.goal = -1
-        self.gridXMarkings = []
+        self.gridMarkings = []
 
     def onPressDataToggle(self, event):
         self.show_data = not self.show_data
@@ -148,14 +148,14 @@ class CrimeMap:
         x_node = self.grid_x_ticks[i]
         y_node = self.grid_y_ticks[j]
         start = self.axmap.text(x_node, y_node, symbol, fontdict=dict(fontsize=8, ha='center', va='center', color=color))
-        self.gridXMarkings.append(start)
+        self.gridMarkings.append(start)
         plt.draw()
 
     def clearPointsOnMap(self):
-        for marking in self.gridXMarkings:
+        for marking in self.gridMarkings:
             marking.remove()
             marking = None
-        self.gridXMarkings = []
+        self.gridMarkings = []
 
     def onPickMapCoordinate(self, artist, mouseevent):
         # get the point the user selected on grid
@@ -175,7 +175,7 @@ class CrimeMap:
                 self.start = -1
                 self.clearPointsOnMap()
             else:
-                self.drawPointOnMap(self.start[0], self.start[1], 'O', 'r')
+                self.drawPointOnMap(self.start[0], self.start[1], 'S', 'r')
 
         # if the start point is set but not the destination
         elif self.start != -1 and self.goal == -1:
@@ -188,7 +188,7 @@ class CrimeMap:
             elif self.start == self.goal:
                 self.goal = -1
             else:
-                self.drawPointOnMap(self.goal[0], self.goal[1], 'X', 'g')
+                self.drawPointOnMap(self.goal[0], self.goal[1], 'G', 'g')
                 # call the AStarSearch on the start and goal points
                 self.aStarSearch()
 
@@ -201,7 +201,7 @@ class CrimeMap:
             if self.start[0] == -1 or self.start[1] == -1:
                 self.start = -1
             else:
-                self.drawPointOnMap(self.start[0], self.start[1], 'O', 'r')
+                self.drawPointOnMap(self.start[0], self.start[1], 'S', 'r')
 
         print(self.start)
         print(self.goal)
@@ -357,14 +357,18 @@ class CrimeMap:
         open_list.append(self.start)
 
 
-        self.axmap.annotate("",
-                            xy=(self.start[0], self.start[1]), xycoords='data',
-                            xytext=(self.goal[0], self.goal[1]), textcoords='data',
+        x1 = self.grid_x_ticks[self.start[0]]
+        y1 = self.grid_y_ticks[self.start[1]]
+        x2 = self.grid_x_ticks[self.goal[0]]
+        y2 = self.grid_y_ticks[self.goal[1]]
+        annotation = self.axmap.annotate("",
+                            xy=(x1, y1), xycoords='data',
+                            xytext=(x2, y2), textcoords='data',
                             arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
-        plt.draw()
+        self.gridMarkings.append(annotation)
 
-        plt.title('Search Done!', fontsize=8)
-        self.displayStDevAndMean()
+        plt.show()
+
 
 def main():
     crimes_map = CrimeMap()
