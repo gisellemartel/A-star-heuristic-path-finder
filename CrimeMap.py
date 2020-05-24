@@ -9,6 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.widgets import Slider, Button
+import matplotlib.ticker as tkr
 import numpy as np
 
 
@@ -16,8 +17,8 @@ import numpy as np
 # this will be used by A*
 class Cell:
     def __init__(self):
-        self.vertices = [Point(), Point(), Point(), Point()]
-        self.is_obstruction = False
+        self.vertices = [Node(), Node(), Node(), Node()]
+        self.is_high_crime_area = False
         self.num_crimes = 0
 
     def display(self):
@@ -29,11 +30,11 @@ class Cell:
         print('\nnum_crimes: ' + self.num_crimes)
 
 
-class Point:
+class Node:
     def __init__(self):
         self.grid_pos = [0, 0]
         self.lat_long = [-73.58, 45.51]
-        self.adjacent_point = []
+        self.adjacent_nodes = []
         self.adjacent_cells = []
         self.h = 0
         self.g = 0
@@ -86,6 +87,9 @@ class CrimeMap:
 
         self.threshold_val = 0
 
+        self.state = -1
+        self.goal = -1
+
     def onPressDataToggle(self, event):
         self.show_data = not self.show_data
         self.setGridDisplayData()
@@ -119,7 +123,26 @@ class CrimeMap:
         scell.on_changed(update)
         btoggle.on_clicked(self.onPressDataToggle)
         plt.ioff()
+        self.axmap.set_picker(self.on_pick)
+
         plt.show()
+
+    def on_pick(self, artist, mouseevent):
+        x, y = mouseevent.xdata, mouseevent.ydata
+
+        if self.state == -1:
+            self.state = [x, y]
+        elif self.state != -1 and self.goal == -1:
+            self.goal = [x, y]
+            self.aStarSearch()
+        else:
+            self.state = [x,y]
+            self.goal = -1
+
+        print(self.state)
+        print(self.goal)
+
+        return True, {}
 
     def updateMap(self):
         # get the horizontal-vertical size of grid (X*Y)
@@ -151,11 +174,16 @@ class CrimeMap:
             self.y_values,
             bins=grid_dimensions,
             cmap=self.cmap,
-            norm=grid_norm
+            norm=grid_norm,
             )
+
         padding = .002
+
         plt.xlim(self.total_bounds[0]-padding, self.total_bounds[2]+padding)
         plt.ylim(self.total_bounds[1]-padding, self.total_bounds[3]+padding)
+
+        self.axmap.xaxis.set_minor_locator(tkr.AutoMinorLocator(n=4))
+        self.axmap.xaxis.set_minor_formatter(tkr.FixedFormatter(grid_dimensions))
 
         # update the tick values and # of crimes per cell
         self.crimes_per_cell = np.array(crime_map[0])
@@ -209,71 +237,27 @@ class CrimeMap:
 
         # display info
         plt.title(textstr, fontsize=8)
-
-    def promptUserToSpecifyPoints(self):
-        print('GRID BOUNDS\nxmin: ' + str(self.total_bounds[0]) + '\n'
-              + 'xmax: ' + str(self.total_bounds[2]) + '\n'
-              + 'ymin: ' + str(self.total_bounds[1]) + '\n'
-              + 'ymax: ' + str(self.total_bounds[3]) + '\n')
-        while True:
-            start_x = float(input('Please enter the x-coordinate of your starting point'))
-            if start_x < self.total_bounds[0] or start_x > self.total_bounds[2]:
-                print('Coordinate is out of bounds, please try again')
-            else:
-                break
-
-        while True:
-            start_y = float(input('Please enter the y-coordinate of your starting point'))
-            if start_y < self.total_bounds[1] or start_y > self.total_bounds[3]:
-                print('Coordinate is out of bounds, please try again')
-            else:
-                break
-
-        while True:
-            end_x = float(input('Please enter the x-coordinate of your end point'))
-            if end_x < self.total_bounds[0] or end_x > self.total_bounds[2]:
-                print('Coordinate is out of bounds, please try again')
-            else:
-                break
-
-        while True:
-            end_y = float(input('Please enter the y-coordinate of your end point'))
-            if end_y < self.total_bounds[1] or end_y > self.total_bounds[3]:
-                print('Coordinate is out of bounds, please try again')
-            else:
-                break
-
-        self.aStarSearch([start_x, start_y], [end_x, end_y])
-
-    def aStarSearch(self, start_point, end_point):
-        start_pos = self.findPosOnGridFromPoint(start_point)
-        end_pos = self.findPosOnGridFromPoint(end_point)
-
-        if start_pos[0] == -1 or start_pos[1] == -1 or end_pos[0] == -1 or end_pos[1] == -1:
-            print('Invalid value given, point found outside of boundaries of map!')
-            # self.promptUserToSpecifyPoints()
-
-        print(start_pos)
-        print(end_pos)
-
-        open_list = []
-        closed_list = []
-
-        open_list.append(start_pos)
-
-
-
-
-
-        # self.axmap.annotate("",
-        #                     xy=(start_point[0], start_point[1]), xycoords='data',
-        #                     xytext=(end_point[0], end_point[1]), textcoords='data',
-        #                     arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
-
-        search_again = input('Would you like to conduct another search? Enter \'y\'')
-
-        if search_again == 'y':
-            self.promptUserToSpecifyPoints()
+    #
+    # def userInputHandler(self, i, j, msg):
+    #     while True:
+    #         point = float(input(msg))
+    #         if point < self.total_bounds[i] or point > self.total_bounds[j]:
+    #             print('Coordinate is out of bounds, please try again')
+    #         else:
+    #             break
+    #     return point
+    #
+    # def promptUserToSpecifyPoints(self):
+    #     print('GRID BOUNDS\nxmin: ' + str(self.total_bounds[0]) + '\n'
+    #           + 'xmax: ' + str(self.total_bounds[2]) + '\n'
+    #           + 'ymin: ' + str(self.total_bounds[1]) + '\n'
+    #           + 'ymax: ' + str(self.total_bounds[3]) + '\n')
+    #
+    #     start_x = self.userInputHandler(0, 2, 'Please enter the x-coordinate of your starting point')
+    #     start_y = self.userInputHandler(1, 3, 'Please enter the y-coordinate of your starting point')
+    #     end_x = self.userInputHandler(0, 2, 'Please enter the x-coordinate of your end point')
+    #     end_y = self.userInputHandler(1, 3, 'Please enter the y-coordinate of your end point')
+    #     self.aStarSearch([start_x, start_y], [end_x, end_y])
 
     def findPosOnGridFromPoint(self, point):
         x = point[0]
@@ -304,10 +288,34 @@ class CrimeMap:
 
         return [start_pos_x, start_pos_y]
 
+    def aStarSearch(self):
+        start_pos = self.findPosOnGridFromPoint(self.state)
+        end_pos = self.findPosOnGridFromPoint(self.goal)
 
-crimes_map = CrimeMap()
-crimes_map.plotCrimeMap()
-crimes_map.promptUserToSpecifyPoints()
+        # if start_pos[0] == -1 or start_pos[1] == -1 or end_pos[0] == -1 or end_pos[1] == -1:
+        #     print('Invalid value given, point found outside of boundaries of map!')
+
+        print(start_pos)
+        print(end_pos)
+
+        open_list = []
+        closed_list = []
+
+        # add start node to open list
+        open_list.append(start_pos)
 
 
-# a_star_search = AStar(crimes_map.start_point, crimes_map.end_point)
+        # self.axmap.annotate("",
+        #                     xy=(start_point[0], start_point[1]), xycoords='data',
+        #                     xytext=(end_point[0], end_point[1]), textcoords='data',
+        #                     arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
+
+
+
+def main():
+    crimes_map = CrimeMap()
+    crimes_map.plotCrimeMap()
+
+
+if __name__ == '__main__':
+    main()
