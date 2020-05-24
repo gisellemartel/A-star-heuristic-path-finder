@@ -290,11 +290,13 @@ class CrimeMap:
 
                 p1 = Node(i, j, crime_map[1][i], crime_map[2][j])
 
+                # boundary checks at edges of graph
                 if j + 1 < len(crime_map[2]):
                     p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j + 1])
                 else:
                     p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j])
 
+                # boundary checks at edges of graph
                 if i + 1 < len(crime_map[1]) and j + 1 < len(crime_map[2]):
                     p2 = Node(i + 1, j, crime_map[1][i+1], crime_map[2][j])
                     p4 = Node(i + 1, j + 1, crime_map[1][i+1], crime_map[2][j+1])
@@ -308,22 +310,24 @@ class CrimeMap:
                     p2 = Node(i + 1, j, crime_map[1][i], crime_map[2][j])
                     p4 = Node(i + 1, j + 1, crime_map[1][i], crime_map[2][j])
 
-                pos1 = i * len(crimes) + j
-                pos2 = (i + 1) * len(crimes) + j
-                pos3 = i * len(crimes) + j + 1
-                pos4 = (i + 1) * len(crimes) + j + 1
+                # 1d representation of 2d data
+                pos1 = i * len(crime_map[1]) + j
+                pos2 = (i + 1) * len(crime_map[1]) + j
+                pos3 = i * len(crime_map[1]) + j + 1
+                pos4 = (i + 1) * len(crime_map[1]) + j + 1
 
-                MAX_NUM_NODES = len(crime_map[1])*len(crime_map[2])
+                max_num_nodes = len(crime_map[1])*len(crime_map[2])
 
-                if pos1 not in self.nodes and pos1 < MAX_NUM_NODES:
+                if pos1 not in self.nodes and pos1 < max_num_nodes:
                     self.nodes[pos1] = p1
-                if pos2 not in self.nodes and pos2 < MAX_NUM_NODES:
+                if pos2 not in self.nodes and pos2 < max_num_nodes:
                     self.nodes[pos2] = p2
-                if pos3 not in self.nodes and pos3 < MAX_NUM_NODES:
+                if pos3 not in self.nodes and pos3 < max_num_nodes:
                     self.nodes[pos3] = p3
-                if pos4 not in self.nodes and pos4 < MAX_NUM_NODES:
+                if pos4 not in self.nodes and pos4 < max_num_nodes:
                     self.nodes[pos4] = p4
 
+                # parse the cell data if we are not at the boundary of graph
                 if i < len(crimes) and j < len(crimes) and j < len(crimes[i]) and i < len(crimes[i]):
                     num_crimes = crimes[i][j]
 
@@ -339,7 +343,6 @@ class CrimeMap:
                     self.addAdjacentCellToNode(pos4, cell)
 
                     self.cells.append(cell)
-        print
 
         # debug
         # for cell in self.cells:
