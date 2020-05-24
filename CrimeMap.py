@@ -11,10 +11,16 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.widgets import Slider, Button
 import matplotlib.ticker as tkr
 import numpy as np
-import heapq
+from queue import PriorityQueue
 
 #TODO: When parsing info from file, make grid object containing every point (tick) on grid
 # this will be used by A*
+
+DIAGONAL_EDGE_COST = 1.5
+CRIME_EDGE_COST = 1.2
+SAFE_EDGE_COST = 1
+
+
 class Cell:
     def __init__(self, p1, p2, p3, p4, x_pos, y_pos, is_high_crime_area, num_crimes):
         self.vertices = [p1, p2, p3, p4]
@@ -44,7 +50,7 @@ class Node:
     def __init__(self, x_pos, y_pos, x_tick, y_tick):
         self.grid_pos = [x_pos, y_pos]
         self.lat_long = [x_tick, y_tick]
-        self.adjacent_nodes = []
+        self.adjacent_nodes = PriorityQueue()
         self.adjacent_cells = []
         self.h = 0
         self.g = 0
@@ -60,18 +66,21 @@ class Node:
         self.adjacent_cells.append(cell)
 
     def display(self):
-        print('adjacent_nodes')
-        for node in self.adjacent_nodes:
-            node.display()
-
-        print('adjacent_cells')
-        for cell in self.adjacent_cells:
-            cell.display()
-
+        print('grid pos: ' + str(self.grid_pos))
         print('h:' + str(self.h))
         print('g:' + str(self.g))
         print('f:' + str(self.f))
-        print('\n\n')
+
+        if len(self.adjacent_nodes) > 0:
+            print('adjacent_nodes')
+            for node in self.adjacent_nodes:
+                node.display()
+
+        # print('adjacent_cells')
+        # for cell in self.adjacent_cells:
+        #     cell.display()
+
+        print('\n')
 
 
 def findPositionOfTick(grid_ticks, p):
@@ -130,6 +139,7 @@ class CrimeMap:
         self.start = -1
         self.goal = -1
         self.gridMarkings = []
+        self.grid_size = 0
 
         # data to be used by A*
         self.cells = []
@@ -249,14 +259,64 @@ class CrimeMap:
         if idx in self.nodes and self.nodes[idx] is not None:
             self.nodes[idx].addAdjacentCell(cell)
 
-    def parseNodes(self):
+    def parseCornerNode(self, i, cell, pos):
+        x = pos[0]
+        y = pos[1]
 
+        adj_pos = []
+
+        if x == 0:
+            adj_pos.insert(0, 1)
+        elif x == self.grid_size - 1:
+            adj_pos.insert(0, self.grid_size - 2)
+
+        if y == 0:
+            adj_pos.insert(1, 1)
+        elif x == self.grid_size - 1:
+            adj_pos.insert(1, self.grid_size - 2)
+
+        # only 1 possible path (as long as adjacent cell is not blocked)
+        if not cell.is_high_crime_area:
+            diagonal = self.getNodeByPos(adj_pos)
+            if diagonal:
+                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, diagonal))
+
+    def parseBoundaryNode(self):
+        pass
+
+    def parseNodes(self):
+        # find all the adjacent nodes for each node in grid and place them in priority queue based on actual cost
+        #
+        #   X - - X - - X
+        #   |     |     |
+        #   |     |     |
+        #   X - - N - - X
+        #   |     |     |
+        #   |     |     |
+        #   X - - X - - X
+        #
         for i in self.nodes:
             cells = self.nodes[i].adjacent_cells
 
             # node is one of 4 grid corners
             if len(cells) == 1:
-                print('Corner Node')
+                cell = cells[0]
+
+                # bottom left
+                if cell.grid_pos == [0, 0]:
+                    self.parseCornerNode(i, cell, [0, 0])
+
+                # top left
+                elif cell.grid_pos == [0, self.grid_size - 1]:
+                    self.parseCornerNode(i, cell, [0, self.grid_size - 1])
+
+                # bottom right
+                elif cell.grid_pos == [self.grid_size - 1, 0]:
+                    self.parseCornerNode(i, cell, [self.grid_size - 1, 0])
+
+                # top right
+                elif cell.grid_pos == [self.grid_size - 1, self.grid_size - 1]:
+                    self.parseCornerNode(i, cell, [self.grid_size - 1, self.grid_size - 1])
 
             # node is a non-corner boundary node
             elif len(cells) == 2:
@@ -266,7 +326,11 @@ class CrimeMap:
             elif len(cells) == 4:
                 pass
 
-
+    def getNodeByPos(self, pos):
+        for i in self.nodes:
+            if self.nodes[i] and self.nodes[i].grid_pos == pos:
+                return self.nodes[i]
+        return None
 
     def parseCrimeMap(self, crime_map):
         self.cells = []
@@ -353,10 +417,11 @@ class CrimeMap:
 
         self.parseNodes()
 
-
     def updateMap(self):
         # get the horizontal-vertical size of grid (X*Y)
         grid_dimensions = self.calcGridDimensions()
+
+        self.grid_size = grid_dimensions[0]
         # use matplotlib hist2d function to plot grid with given step size
         crime_map = self.axmap.hist2d(self.x_values, self.y_values, bins=grid_dimensions, cmap=self.cmap)
 
@@ -548,26 +613,26 @@ class CrimeMap:
                     plt.show()
 
             # Generate children
-            children = []
-            for new_position in current_node.adjacent_nodes:  # Adjacent squares
-
-                # Get node position
-                node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-
-                # # Make sure within range
-                # if node_position[0] > (len(self.cells) - 1) or node_position[0] < 0 or node_position[1] > (
-                #         len(self.cells[len(self.cells) - 1]) - 1) or node_position[1] < 0:
-                #     continue
-
-                # Make sure walkable terrain
-                if self.cells[node_position[0]][node_position[1]] != 0:
-                    continue
-
-                # Create new node
-                new_node = Node(current_node, node_position)
-
-                # Append
-                children.append(new_node)
+            # children = []
+            # for new_position in current_node.adjacent_nodes:  # Adjacent squares
+            #
+            #     # Get node position
+            #     node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+            #
+            #     # # Make sure within range
+            #     # if node_position[0] > (len(self.cells) - 1) or node_position[0] < 0 or node_position[1] > (
+            #     #         len(self.cells[len(self.cells) - 1]) - 1) or node_position[1] < 0:
+            #     #     continue
+            #
+            #     # Make sure walkable terrain
+            #     if self.cells[node_position[0]][node_position[1]] != 0:
+            #         continue
+            #
+            #     # Create new node
+            #     new_node = Node(current_node, node_position)
+            #
+            #     # Append
+            #     children.append(new_node)
 
             # # Loop through children
             # for child in children:
@@ -597,9 +662,6 @@ class CrimeMap:
         # x2 = self.grid_x_ticks[self.goal[0]]
         # y2 = self.grid_y_ticks[self.goal[1]]
         # self.drawLine(x1, y1, x2, y2)
-
-
-
 
 def main():
     crimes_map = CrimeMap()
