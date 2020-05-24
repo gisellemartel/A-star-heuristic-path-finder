@@ -15,30 +15,53 @@ import numpy as np
 
 #TODO: When parsing info from file, make grid object containing every point (tick) on grid
 # this will be used by A*
+class PriorityQueue:
+    def __init__(self, head):
+        nodes = [head]
+
+
 class Cell:
-    def __init__(self):
-        self.vertices = [Node(), Node(), Node(), Node()]
-        self.is_high_crime_area = False
-        self.num_crimes = 0
+    def __init__(self, p1, p2, p3, p4, is_high_crime_area, num_crimes):
+        self.vertices = [p1, p2, p3, p4]
+        self.is_high_crime_area = is_high_crime_area
+        self.num_crimes = num_crimes
+
+    def __eq__(self, cell):
+        return self.vertices == cell.vertices \
+               and self.is_high_crime_area == cell.is_high_crime_area \
+               and self.num_crimes == cell.num_crimes
 
     def display(self):
         print('\ncell vertices')
         for v in self.vertices:
-            v.display()
+            points = v.grid_pos
+            print(points)
+        for v in self.vertices:
+            points = v.lat_long
+            print(points)
 
-        print('\nis_obstruction: ' + self.is_obstruction)
-        print('\nnum_crimes: ' + self.num_crimes)
+        print('is_high_crime_area: ' + str(self.is_high_crime_area))
+        print('num_crimes: ' + str(self.num_crimes))
 
 
 class Node:
-    def __init__(self):
-        self.grid_pos = [0, 0]
-        self.lat_long = [-73.58, 45.51]
+    def __init__(self, x_pos, y_pos, x_tick, y_tick):
+        self.grid_pos = [x_pos, y_pos]
+        self.lat_long = [x_tick, y_tick]
         self.adjacent_nodes = []
         self.adjacent_cells = []
         self.h = 0
         self.g = 0
         self.f = 0
+
+    def __eq__(self, node):
+        return self.grid_pos == node.grid_pos
+
+    def addAdjacentNode(self, node):
+        self.adjacent_nodes.append(node)
+
+    def addAdjacentCell(self, cell):
+        self.adjacent_cells.append(cell)
 
     def display(self):
         print('adjacent_nodes')
@@ -50,8 +73,9 @@ class Node:
             cell.display()
 
         print('h:' + str(self.h))
-        print('\ng:' + str(self.g))
-        print('\nf:' + str(self.f))
+        print('g:' + str(self.g))
+        print('f:' + str(self.f))
+        print('\n\n')
 
 
 def findPositionOfTick(grid_ticks, p):
@@ -65,6 +89,13 @@ def findPositionOfTick(grid_ticks, p):
                 return i - 1
             else:
                 return i
+
+
+def isInList(el, lst):
+    for item in lst:
+        if el == item:
+            return True
+    return False
 
 
 class CrimeMap:
@@ -82,7 +113,7 @@ class CrimeMap:
         self.y_values = [point.y for point in self.crime_points]
 
         # generate a color map to represent the crime areas
-        self.cmap = matplotlib.colors.LinearSegmentedColormap.from_list('Crime Points MTL', ['white', 'orange'])
+        self.cmap = matplotlib.colors.LinearSegmentedColormap.from_list('Crime Points MTL', ['white', 'purple'])
 
         # get the bounds of the crime map from shapefile data
         self.total_bounds = self.data.total_bounds
@@ -103,6 +134,10 @@ class CrimeMap:
         self.start = -1
         self.goal = -1
         self.gridMarkings = []
+
+        # data to be used by A*
+        self.cells = []
+        self.nodes = []
 
     def onPressDataToggle(self, event):
         self.show_data = not self.show_data
@@ -165,7 +200,7 @@ class CrimeMap:
         if x is None or y is None \
                 or x < self.total_bounds[0] or x > self.total_bounds[2] \
                 or y < self.total_bounds[1] or y > self.total_bounds[3]:
-            self.clearPointsOnMap()
+            return True, {}
 
         # if the start point is not set
         if self.start == -1:
@@ -203,10 +238,67 @@ class CrimeMap:
             else:
                 self.drawPointOnMap(self.start[0], self.start[1], 'S', 'r')
 
-        print(self.start)
-        print(self.goal)
-
         return True, {}
+
+    def parseCrimeMap(self, crime_map):
+        self.cells = []
+        self.nodes = []
+        crimes = crime_map[0]
+
+        # create node object for each vertex in grid
+        # create cell object for each cell in grid. each cell has 4 vertices (nodes) to be used in A* path finder
+        #
+        #
+        # p3 - - - p4
+        # |  GRID  |
+        # |  CELL  |
+        # p1 - - - p2
+        #
+        # p1, p2, p3, p4 represent nodes and the cube represents a cell
+        for i in range(0, len(crimes)):
+            for j in range(0, len(crimes[i])):
+                p1 = Node(i, j, crime_map[1][i], crime_map[2][j])
+                p2 = Node(i + 1, j, crime_map[1][j+1], crime_map[2][j])
+                p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j+1])
+                p4 = Node(i + 1, j + 1, crime_map[1][i+1], crime_map[2][j+1])
+
+                if not isInList(p1, self.nodes):
+                    self.nodes.append(p1)
+                if not isInList(p2, self.nodes):
+                    self.nodes.append(p2)
+                if not isInList(p3, self.nodes):
+                    self.nodes.append(p3)
+                if not isInList(p4, self.nodes):
+                    self.nodes.append(p4)
+
+                if j < len(crimes[i]) and i < len(crimes[i]):
+                    num_crimes = crime_map[0][i][j]
+
+                # determine if the cell is an obstruction if it has crimes that meet or exceed threshold
+                if num_crimes >= self.threshold_val:
+                    cell = Cell(p1, p2, p3, p4, True, num_crimes)
+                    self.cells.append(cell)
+                    p1.addAdjacentCell(cell)
+                    p2.addAdjacentCell(cell)
+                    p3.addAdjacentCell(cell)
+                    p4.addAdjacentCell(cell)
+                else:
+                    cell = Cell(p1, p2, p3, p4, False, num_crimes)
+                    self.cells.append(cell)
+                    p1.addAdjacentCell(cell)
+                    p2.addAdjacentCell(cell)
+                    p3.addAdjacentCell(cell)
+                    p4.addAdjacentCell(cell)
+
+        # debug
+        # for cell in self.cells:
+        #     cell.display()
+
+        # for node in self.nodes:
+        #     node.display()
+
+        for node in self.nodes:
+            
 
     def updateMap(self):
         # get the horizontal-vertical size of grid (X*Y)
@@ -241,13 +333,15 @@ class CrimeMap:
             norm=grid_norm,
             )
 
-        padding = .002
+        self.parseCrimeMap(crime_map)
+
+        padding = .000
 
         plt.xlim(self.total_bounds[0]-padding, self.total_bounds[2]+padding)
         plt.ylim(self.total_bounds[1]-padding, self.total_bounds[3]+padding)
 
-        self.axmap.xaxis.set_minor_locator(tkr.AutoMinorLocator(n=4))
-        self.axmap.xaxis.set_minor_formatter(tkr.FixedFormatter(grid_dimensions))
+        self.axmap.xaxis.set_minor_locator(tkr.AutoMinorLocator(n=5))
+        self.axmap.yaxis.set_minor_locator(tkr.AutoMinorLocator(n=5))
 
         # update the tick values and # of crimes per cell
         self.crimes_per_cell = np.array(crime_map[0])
@@ -256,7 +350,7 @@ class CrimeMap:
 
         if self.show_data:
             self.setGridDisplayData()
-        self.displayStDevAndMean()
+        self.displayPlotInfoTitle()
 
     def calcGridDimensions(self):
         # get the bounds of the whole crime area
@@ -290,7 +384,7 @@ class CrimeMap:
                                       fontdict=dict(fontsize=3, ha='center', va='center'))
                     self.grid_display_text.append(text)
 
-    def displayStDevAndMean(self):
+    def displayPlotInfoTitle(self):
         stdev = self.crimes_per_cell.std()
         mean = self.crimes_per_cell.mean()
 
@@ -339,35 +433,118 @@ class CrimeMap:
 
         return [x_pos, y_pos]
 
-    def aStarSearch(self):
-
-        if self.start[0] == -1 or self.start[1] == -1 or self.goal[0] == -1 or self.goal[1] == -1:
-            print('Invalid value given, point found outside of boundaries of map!')
-            return
-
-        print(self.start)
-        print(self.goal)
-        plt.title('Initiating A* search...', fontsize=8)
-
-
-        open_list = []
-        closed_list = []
-
-        # add start node to open list
-        open_list.append(self.start)
-
-
-        x1 = self.grid_x_ticks[self.start[0]]
-        y1 = self.grid_y_ticks[self.start[1]]
-        x2 = self.grid_x_ticks[self.goal[0]]
-        y2 = self.grid_y_ticks[self.goal[1]]
+    def drawLine(self, x1, y1, x2, y2):
         annotation = self.axmap.annotate("",
                             xy=(x1, y1), xycoords='data',
                             xytext=(x2, y2), textcoords='data',
                             arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
         self.gridMarkings.append(annotation)
 
-        plt.show()
+    def searchHeuristic(self):
+        pass
+
+    def aStarSearch(self):
+
+        # sanity check
+        if self.start[0] == -1 or self.start[1] == -1 or self.goal[0] == -1 or self.goal[1] == -1:
+            print('Invalid value given, point found outside of boundaries of map!')
+            return
+
+        # Create start and end node
+        start_node = Node(self.start[0], self.start[1], self.grid_x_ticks[self.start[0]], self.grid_y_ticks[self.start[1]])
+        start_node.g = start_node.h = start_node.f = 0
+        goal_node = Node(self.goal[0], self.goal[1], self.grid_x_ticks[self.goal[0]], self.grid_y_ticks[self.goal[1]])
+        goal_node.g = goal_node.h = goal_node.f = 0
+
+        # create empty open and closed lists
+        open_list = []
+        closed_list = []
+
+        # add start node to open list
+        open_list.append(start_node)
+
+        # Loop until you find the end
+        while len(open_list) > 0:
+            # Get the current node
+            current_node = open_list[0]
+            current_index = 0
+            for index, item in enumerate(open_list):
+                if item.f < current_node.f:
+                    current_node = item
+                    current_index = index
+
+            # Pop current off open list, add to closed list
+            open_list.pop(current_index)
+            closed_list.append(current_node)
+
+            # Found the goal
+            if current_node == goal_node:
+                path = []
+                current = current_node
+                while current is not None:
+                    path.append(current.position)
+                    current = current.parent
+                path = path[::-1]
+                for i in range(0, len(path) - 2):
+                    x1 = path[i].x_tick
+                    y1 = path[i].y_tick
+                    x2 = path[i+1].x_tick
+                    y2 = path[i+1].y_tick
+                    self.drawLine(x1, y1, x2, y2)
+                    plt.show()
+
+            # Generate children
+            children = []
+            for new_position in current_node.adjacent_nodes:  # Adjacent squares
+
+                # Get node position
+                node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+
+                # # Make sure within range
+                # if node_position[0] > (len(self.cells) - 1) or node_position[0] < 0 or node_position[1] > (
+                #         len(self.cells[len(self.cells) - 1]) - 1) or node_position[1] < 0:
+                #     continue
+
+                # Make sure walkable terrain
+                if self.cells[node_position[0]][node_position[1]] != 0:
+                    continue
+
+                # Create new node
+                new_node = Node(current_node, node_position)
+
+                # Append
+                children.append(new_node)
+
+            # # Loop through children
+            # for child in children:
+            #
+            #     # Child is on the closed list
+            #     for closed_child in closed_list:
+            #         if child == closed_child:
+            #             continue
+            #
+            #     # Create the f, g, and h values
+            #     child.g = current_node.g + 1
+            #     child.h = ((child.position[0] - goal_node.position[0]) ** 2) + (
+            #                 (child.position[1] - goal_node.position[1]) ** 2)
+            #     child.f = child.g + child.h
+            #
+            #     # Child is already in the open list
+            #     for open_node in open_list:
+            #         if child == open_node and child.g > open_node.g:
+            #             continue
+            #
+            #     # Add the child to the open list
+            #     open_list.append(child)
+
+
+        # x1 = self.grid_x_ticks[self.start[0]]
+        # y1 = self.grid_y_ticks[self.start[1]]
+        # x2 = self.grid_x_ticks[self.goal[0]]
+        # y2 = self.grid_y_ticks[self.goal[1]]
+        # self.drawLine(x1, y1, x2, y2)
+
+
 
 
 def main():
