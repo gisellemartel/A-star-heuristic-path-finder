@@ -52,6 +52,7 @@ class Node:
         self.h = 0
         self.g = 0
         self.f = 0
+        self.parent = None
 
     def __eq__(self, node):
         return self.grid_pos == node.grid_pos
@@ -713,12 +714,9 @@ class CrimeMap:
             print('Invalid value given, point found outside of boundaries of map!')
             return
 
-        # Create start and end node
-        start_node = Node(self.start[0], self.start[1], self.grid_x_ticks[self.start[0]],
-                          self.grid_y_ticks[self.start[1]])
-        start_node.g = start_node.h = start_node.f = 0
-        goal_node = Node(self.goal[0], self.goal[1], self.grid_x_ticks[self.goal[0]], self.grid_y_ticks[self.goal[1]])
-        goal_node.g = goal_node.h = goal_node.f = 0
+        # Get start and goals nodes from parsed node dictionary
+        start_node = self.getNodeByPos(self.start)
+        goal_node = self.getNodeByPos(self.goal)
 
         # create empty open and closed lists
         open_list = []
@@ -734,7 +732,9 @@ class CrimeMap:
             current_index = 0
             for index, item in enumerate(open_list):
                 if item.f < current_node.f:
+                    temp = current_node
                     current_node = item
+                    item.parent = temp
                     current_index = index
 
             # Pop current off open list, add to closed list
@@ -746,23 +746,23 @@ class CrimeMap:
                 path = []
                 current = current_node
                 while current is not None:
-                    path.append(current.position)
+                    path.append(current)
                     current = current.parent
                 path = path[::-1]
-                for i in range(0, len(path) - 2):
-                    x1 = path[i].x_tick
-                    y1 = path[i].y_tick
-                    x2 = path[i + 1].x_tick
-                    y2 = path[i + 1].y_tick
+                for i in range(0, len(path) - 1):
+                    x1 = path[i].lat_long[0]
+                    y1 = path[i].lat_long[1]
+                    x2 = path[i + 1].lat_long[0]
+                    y2 = path[i + 1].lat_long[1]
                     self.drawLine(x1, y1, x2, y2)
-                    plt.show()
+                plt.show()
 
-            # Generate children
+            # # Generate children
             # children = []
-            # for new_position in current_node.adjacent_nodes:  # Adjacent squares
+            # for adj_node in current_node.adjacent_nodes:  # Adjacent squares
             #
             #     # Get node position
-            #     node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+            #     node_position = (current_node.grid_pos[0] + adj_node.grid_pos[0], current_node.grid_pos[1] + adj_node.grid_pos[1])
             #
             #     # # Make sure within range
             #     # if node_position[0] > (len(self.cells) - 1) or node_position[0] < 0 or node_position[1] > (
@@ -779,27 +779,30 @@ class CrimeMap:
             #     # Append
             #     children.append(new_node)
 
-            # # Loop through children
-            # for child in children:
-            #
-            #     # Child is on the closed list
-            #     for closed_child in closed_list:
-            #         if child == closed_child:
-            #             continue
-            #
-            #     # Create the f, g, and h values
-            #     child.g = current_node.g + 1
-            #     child.h = ((child.grid_pos[0] - goal_node.grid_pos[0]) ** 2) + (
-            #                 (child.grid_pos[1] - goal_node.grid_pos[1]) ** 2)
-            #     child.f = child.g + child.h
-            #
-            #     # Child is already in the open list
-            #     for open_node in open_list:
-            #         if child == open_node and child.g > open_node.g:
-            #             continue
-            #
-            #     # Add the child to the open list
-            #     open_list.append(child)
+            # Loop through children
+            q = current_node.adjacent_nodes.queue
+            for i in range(0, len(q)):
+
+                child = q[i][1]
+
+                # Child is on the closed list
+                for closed_child in closed_list:
+                    if child == closed_child:
+                        continue
+
+                # Create the f, g, and h values
+                child.g = current_node.g + 1
+                child.h = ((child.grid_pos[0] - goal_node.grid_pos[0]) ** 2) + (
+                            (child.grid_pos[1] - goal_node.grid_pos[1]) ** 2)
+                child.f = child.g + child.h
+
+                # Child is already in the open list
+                for open_node in open_list:
+                    if child == open_node and child.g > open_node.g:
+                        continue
+
+                # Add the child to the open list
+                open_list.append(child)
 
         # x1 = self.grid_x_ticks[self.start[0]]
         # y1 = self.grid_y_ticks[self.start[1]]
