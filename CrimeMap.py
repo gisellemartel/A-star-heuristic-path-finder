@@ -297,6 +297,9 @@ class CrimeMap:
         #
         for i in self.nodes:
             cells = self.nodes[i].adjacent_cells
+            print(self.nodes[i].grid_pos)
+            node_x = self.nodes[i].grid_pos[0]
+            node_y = self.nodes[i].grid_pos[1]
 
             # node is one of 4 grid corners
             if len(cells) == 1:
@@ -320,26 +323,36 @@ class CrimeMap:
 
             # node is a non-corner boundary node
             elif len(cells) == 2:
-                print(self.nodes[i].grid_pos)
-                node_x = self.nodes[i].grid_pos[0]
-                node_y = self.nodes[i].grid_pos[1]
-                for cell in cells:
-                    x = cell.grid_pos[0]
-                    y = cell.grid_pos[1]
+                # both adjacent cells are high crime and therefore no path possible from this node
+                if cells[0].is_high_crime_area and cells[1].is_high_crime_area:
+                    continue
+                # one of the adjacent cells is a high crime area
+                elif cells[0].is_high_crime_area and not cells[1].is_high_crime_area:
+                    pass
+                elif not cells[0].is_high_crime_area and cells[1].is_high_crime_area:
+                    pass
+                # none of the adjacent cells are a high crime area
+                else:
+                    for cell in cells:
+                        x = cell.grid_pos[0]
+                        y = cell.grid_pos[1]
 
-                    print(cell.grid_pos)
-                    print(cell.num_crimes)
+                        print(cell.grid_pos)
+                        print(cell.num_crimes)
 
-                    # cell is located upper-left quadrant
-                    # if x < node_x and y == node_y:
-                    #     print('upper left')
-                    # elif x == node_x and y == node_y:
-                    #     print('upper right')
-                    # elif x < node_x and y < node_y:
-                    #     print('lower left')
-                    # elif x == node_x and y < node_y:
-                    #     print('lower right')
-                print('\n')
+                        # cell is located upper-left quadrant
+                        if x < node_x and y == node_y:
+                            left_diagonal = [x, y + 1]
+                        # cell is located upper-right quadrant
+                        elif x == node_x and y == node_y:
+                            print('upper right')
+                        # cell is located lower-left quadrant
+                        elif x < node_x and y < node_y:
+                            print('lower left')
+                        # cell is located lower-right quadrant
+                        elif x == node_x and y < node_y:
+                            print('lower right')
+                    print('\n')
 
             # non-boundary node
             elif len(cells) == 4:
