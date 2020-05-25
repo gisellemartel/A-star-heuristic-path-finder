@@ -421,6 +421,7 @@ class CrimeMap:
                 if cells[0].is_high_crime_area and cells[1].is_high_crime_area and cells[2].is_high_crime_area and cells[3].is_high_crime_area:
                     continue
                 else:
+                    pass
                     # all diagonals that fall within a low crime area cell are valid paths
                     for j in range(0, len(cells)):
                         if not cells[j].is_high_crime_area:
@@ -442,27 +443,35 @@ class CrimeMap:
 
                     # horizontal and vertical paths
                     # left horizontal
-                    if not cells[0].is_high_crime_area and not cells[1].is_high_crime_area:
+                    if cells[0].is_high_crime_area and cells[1].is_high_crime_area:
+                        pass
+                    elif not cells[0].is_high_crime_area and not cells[1].is_high_crime_area:
                         self.addNodeToPriorityQ(i, [node_x - 1, node_y], SAFE_EDGE_COST)
                     elif not cells[0].is_high_crime_area or not cells[1].is_high_crime_area:
                         self.addNodeToPriorityQ(i, [node_x - 1, node_y], CRIME_EDGE_COST)
 
                     # right horizontal
-                    if not cells[2].is_high_crime_area and not cells[3].is_high_crime_area:
+                    if cells[2].is_high_crime_area and cells[3].is_high_crime_area:
+                        pass
+                    elif not cells[2].is_high_crime_area and not cells[3].is_high_crime_area:
                         self.addNodeToPriorityQ(i, [node_x + 1, node_y], SAFE_EDGE_COST)
-                    elif not cells[3].is_high_crime_area or not cells[3].is_high_crime_area:
+                    elif not cells[2].is_high_crime_area or not cells[3].is_high_crime_area:
                         self.addNodeToPriorityQ(i, [node_x + 1, node_y], CRIME_EDGE_COST)
 
                     # north vertical
-                    if not cells[1].is_high_crime_area and not cells[3].is_high_crime_area:
+                    if cells[1].is_high_crime_area and cells[3].is_high_crime_area:
+                        pass
+                    elif not cells[1].is_high_crime_area and not cells[3].is_high_crime_area:
                         self.addNodeToPriorityQ(i, [node_x, node_y + 1], SAFE_EDGE_COST)
                     elif not cells[1].is_high_crime_area or not cells[3].is_high_crime_area:
                         self.addNodeToPriorityQ(i, [node_x, node_y + 1], CRIME_EDGE_COST)
 
                     # south vertical
-                    if not cells[0].is_high_crime_area and not cells[2].is_high_crime_area:
+                    if cells[0].is_high_crime_area and cells[2].is_high_crime_area:
+                        pass
+                    elif not cells[0].is_high_crime_area and not cells[2].is_high_crime_area:
                         self.addNodeToPriorityQ(i, [node_x, node_y - 1], SAFE_EDGE_COST)
-                    elif not cells[2].is_high_crime_area or not cells[2].is_high_crime_area:
+                    elif not cells[0].is_high_crime_area or not cells[2].is_high_crime_area:
                         self.addNodeToPriorityQ(i, [node_x, node_y - 1], CRIME_EDGE_COST)
 
     def getNodeByPos(self, pos):
@@ -549,9 +558,9 @@ class CrimeMap:
         # parse each node to make the priorityQueue adjacencyList
         self.parseNodes()
 
-        for node in self.nodes:
-            print(node)
-            self.nodes[node].displayPriorityQ()
+        # for node in self.nodes:
+        #     print(node)
+        #     self.nodes[node].displayPriorityQ()
 
     def updateMap(self):
         # get the horizontal-vertical size of grid (X*Y)
