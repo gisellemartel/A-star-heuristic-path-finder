@@ -13,9 +13,6 @@ import matplotlib.ticker as tkr
 import numpy as np
 from queue import PriorityQueue
 
-# TODO: When parsing info from file, make grid object containing every point (tick) on grid
-# this will be used by A*
-
 DIAGONAL_EDGE_COST = 1.5
 CRIME_EDGE_COST = 1.2
 SAFE_EDGE_COST = 1
@@ -282,84 +279,89 @@ class CrimeMap:
             if diagonal:
                 self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, diagonal))
 
-    def addNodeEdges(self,
-                     left_h,
-                     right_h,
-                     north_v,
-                     south_v,
-                     left_h_crime,
-                     right_h_crime,
-                     north_v_crime,
-                     south_v_crime,
-                     nw_d,
-                     ne_d,
-                     sw_d,
-                     se_d,
-                     i,
-                     x,
-                     y):
-        # place node edges into node's priority queue depending on flags set.
-        # 12 possible kind of node edges can be added to the priority queue
-        # nodes that go left, right, north, south with or without crime cost
-        # nodes that go diagonally up or down toward left or right with diagonal cost
-        if left_h:
-            left_horizontal = self.getNodeByPos([x - 1, y])
-            if left_horizontal:
-                self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, left_horizontal))
+    def addNodeToPriorityQ(self, i, pos, cost):
+        node = self.getNodeByPos(pos)
+        if node:
+            self.nodes[i].adjacent_nodes.put((cost, node))
 
-        if right_h:
-            right_horizontal = self.getNodeByPos([x + 1, y])
-            if right_horizontal:
-                self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, right_horizontal))
-
-        if north_v:
-            north_vertical = self.getNodeByPos([x, y + 1])
-            if north_vertical:
-                self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, north_vertical))
-
-        if south_v:
-            south_vertical = self.getNodeByPos([x, y - 1])
-            if south_vertical:
-                self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, south_vertical))
-
-        if left_h_crime:
-            left_horizontal = self.getNodeByPos([x - 1, y])
-            if left_horizontal:
-                self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, left_horizontal))
-
-        if right_h_crime:
-            right_horizontal = self.getNodeByPos([x + 1, y])
-            if right_horizontal:
-                self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, right_horizontal))
-
-        if north_v_crime:
-            north_vertical = self.getNodeByPos([x, y + 1])
-            if north_vertical:
-                self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, north_vertical))
-
-        if south_v_crime:
-            south_vertical = self.getNodeByPos([x, y - 1])
-            if south_vertical:
-                self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, south_vertical))
-
-        if nw_d:
-            upper_left_diagonal = self.getNodeByPos([x - 1, y + 1])
-            if upper_left_diagonal:
-                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, upper_left_diagonal))
-        if ne_d:
-            upper_right_diagonal = self.getNodeByPos([x + 1, y + 1])
-            if upper_right_diagonal:
-                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, upper_right_diagonal))
-
-        if sw_d:
-            lower_left_diagonal = self.getNodeByPos([x - 1, y - 1])
-            if lower_left_diagonal:
-                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, lower_left_diagonal))
-
-        if se_d:
-            lower_right_diagonal = self.getNodeByPos([x + 1, y - 1])
-            if lower_right_diagonal:
-                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, lower_right_diagonal))
+    # def addNodeEdges(self,
+    #                  left_h,
+    #                  right_h,
+    #                  north_v,
+    #                  south_v,
+    #                  left_h_crime,
+    #                  right_h_crime,
+    #                  north_v_crime,
+    #                  south_v_crime,
+    #                  nw_d,
+    #                  ne_d,
+    #                  sw_d,
+    #                  se_d,
+    #                  i,
+    #                  x,
+    #                  y):
+    #     # place node edges into node's priority queue depending on flags set.
+    #     # 12 possible kind of node edges can be added to the priority queue
+    #     # nodes that go left, right, north, south with or without crime cost
+    #     # nodes that go diagonally up or down toward left or right with diagonal cost
+    #     if left_h:
+    #         left_horizontal = self.getNodeByPos([x - 1, y])
+    #         if left_horizontal:
+    #             self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, left_horizontal))
+    #
+    #     if right_h:
+    #         right_horizontal = self.getNodeByPos([x + 1, y])
+    #         if right_horizontal:
+    #             self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, right_horizontal))
+    #
+    #     if north_v:
+    #         north_vertical = self.getNodeByPos([x, y + 1])
+    #         if north_vertical:
+    #             self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, north_vertical))
+    #
+    #     if south_v:
+    #         south_vertical = self.getNodeByPos([x, y - 1])
+    #         if south_vertical:
+    #             self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, south_vertical))
+    #
+    #     if left_h_crime:
+    #         left_horizontal = self.getNodeByPos([x - 1, y])
+    #         if left_horizontal:
+    #             self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, left_horizontal))
+    #
+    #     if right_h_crime:
+    #         right_horizontal = self.getNodeByPos([x + 1, y])
+    #         if right_horizontal:
+    #             self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, right_horizontal))
+    #
+    #     if north_v_crime:
+    #         north_vertical = self.getNodeByPos([x, y + 1])
+    #         if north_vertical:
+    #             self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, north_vertical))
+    #
+    #     if south_v_crime:
+    #         south_vertical = self.getNodeByPos([x, y - 1])
+    #         if south_vertical:
+    #             self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, south_vertical))
+    #
+    #     if nw_d:
+    #         upper_left_diagonal = self.getNodeByPos([x - 1, y + 1])
+    #         if upper_left_diagonal:
+    #             self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, upper_left_diagonal))
+    #     if ne_d:
+    #         upper_right_diagonal = self.getNodeByPos([x + 1, y + 1])
+    #         if upper_right_diagonal:
+    #             self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, upper_right_diagonal))
+    #
+    #     if sw_d:
+    #         lower_left_diagonal = self.getNodeByPos([x - 1, y - 1])
+    #         if lower_left_diagonal:
+    #             self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, lower_left_diagonal))
+    #
+    #     if se_d:
+    #         lower_right_diagonal = self.getNodeByPos([x + 1, y - 1])
+    #         if lower_right_diagonal:
+    #             self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, lower_right_diagonal))
 
     def parseNodes(self):
         # find all the adjacent nodes for each node in grid and place them in priority queue based on actual cost
@@ -403,6 +405,7 @@ class CrimeMap:
                 # both adjacent cells are high crime and therefore no path possible from this node
                 if cells[0].is_high_crime_area and cells[1].is_high_crime_area:
                     continue
+
                 # find the possible paths from boundary node
                 # note that paths along boundary edges of graph not permitted
                 else:
@@ -414,64 +417,78 @@ class CrimeMap:
                     # cell 1 is located lower-left quadrant and cell 2 is located in upper-left quadrant
                     if x0 < node_x and y0 < node_y and x1 < node_x and y1 == node_y:
                         if cells[0].is_high_crime_area:
-                            # path along horizontal and upper diagonal possible
-                            self.addNodeEdges(False, False, False, False, True, False, False, False, True, False, False,
-                                              False, i, node_x, node_y)
+                            # path along left horizontal possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y], CRIME_EDGE_COST)
+                            # path along upper left diagonal possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
                         elif cells[1].is_high_crime_area:
-                            # path along horizontal and lower diagonal possible
-                            self.addNodeEdges(False, False, False, False, True, False, False, False, False, False, True,
-                                              False, i, node_x, node_y)
+                            # path along left horizontal possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y], CRIME_EDGE_COST)
+                            # path along lower left diagonal possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
                         else:
-                            # path along horizontal and both diagonals possible
-                            self.addNodeEdges(True, False, False, False, False, False, False, False, True, False, True,
-                                              False, i, node_x, node_y)
+                            # path along left horizontal possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y], SAFE_EDGE_COST)
+                            # path along both left diagonals possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
 
                     # cell 1 is located lower-left quadrant and cell 2 is located in lower right quadrant
                     elif x0 < node_x and y0 < node_y and x1 == node_x and y1 < node_y:
                         if cells[0].is_high_crime_area:
-                            # path along lower vertical and left diagonal possible
-                            self.addNodeEdges(False, False, False, False, False, False, False, True, False, False, True,
-                                              False, i, node_x, node_y)
+                            # path along lower vertical possible
+                            self.addNodeToPriorityQ(i, [node_x, node_y - 1], CRIME_EDGE_COST)
+                            # path along lower left diagonal possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
                         elif cells[1].is_high_crime_area:
-                            # path along lower vertical and right diagonal possible
-                            self.addNodeEdges(False, False, False, False, False, False, False, True, False, False,
-                                              False,
-                                              True, i, node_x, node_y)
+                            # path along lower vertical possible
+                            self.addNodeToPriorityQ(i, [node_x, node_y - 1], CRIME_EDGE_COST)
+                            # path along lower right diagonal possible
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
                         else:
-                            # path along vertical and both diagonals possible
-                            self.addNodeEdges(False, False, False, True, False, False, False, False, False, False, True,
-                                              True, i, node_x, node_y)
+                            # path along lower vertical possible
+                            self.addNodeToPriorityQ(i, [node_x, node_y - 1], SAFE_EDGE_COST)
+                            # path along both lower diagonals possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
 
                     # cell 1 is located in lower-right quadrant and cell 2 is located in upper-right quadrant
                     elif x0 == node_x and y0 < node_y and x1 == node_x and y1 == node_y:
                         if cells[0].is_high_crime_area:
-                            # path along horizontal and upper diagonal possible
-                            self.addNodeEdges(False, False, False, False, False, True, False, False, False, True, False,
-                                              False, i, node_x, node_y)
+                            # path along right horizontal possible
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y], CRIME_EDGE_COST)
+                            # path along upper right diagonal possible
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
                         elif cells[1].is_high_crime_area:
-                            # path along horizontal and lower diagonal possible
-                            self.addNodeEdges(False, False, False, False, False, True, False, False, False, False,
-                                              False,
-                                              True, i, node_x, node_y)
+                            # path along right horizontal possible
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y], CRIME_EDGE_COST)
+                            # path along lower right diagonal possible
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
                         else:
-                            # path along horizontal and both diagonals possible
-                            self.addNodeEdges(False, True, False, False, False, False, False, False, False, True, False,
-                                              True, i, node_x, node_y)
+                            # path along right horizontal possible
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y], SAFE_EDGE_COST)
+                            # path along both right diagonals possible
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
 
                     # cell 1 is located in upper-left quadrant and cell 2 is located in upper-right quandrant
                     elif x0 < node_x and y0 == node_y and x1 == node_x and y1 == node_y:
                         if cells[0].is_high_crime_area:
-                            # path along upper vertical and left diagonal possible
-                            self.addNodeEdges(False, False, False, False, False, False, True, False, True, False, False,
-                                              False, i, node_x, node_y)
+                            # path along upper vertical possible
+                            self.addNodeToPriorityQ(i, [node_x, node_y + 1], CRIME_EDGE_COST)
+                            # path along upper left diagonal possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
                         elif cells[1].is_high_crime_area:
-                            # path along upper vertical and right diagonal possible
-                            self.addNodeEdges(False, False, False, False, False, False, True, False, False, True, False,
-                                              False, i, node_x, node_y)
+                            # path along upper vertical possible
+                            self.addNodeToPriorityQ(i, [node_x, node_y + 1], CRIME_EDGE_COST)
+                            # path along upper right diagonal possible
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
                         else:
-                            # path along vertical and both diagonals possible
-                            self.addNodeEdges(False, False, True, False, False, False, False, False, True, True, False,
-                                              False, i, node_x, node_y)
+                            # path along upper vertical possible
+                            self.addNodeToPriorityQ(i, [node_x, node_y + 1], SAFE_EDGE_COST)
+                            # path along both upper diagonals possible
+                            self.addNodeToPriorityQ(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.addNodeToPriorityQ(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
 
             # non-boundary node
             elif len(cells) == 4:
