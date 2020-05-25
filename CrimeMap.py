@@ -320,7 +320,26 @@ class CrimeMap:
 
             # node is a non-corner boundary node
             elif len(cells) == 2:
-                pass
+                print(self.nodes[i].grid_pos)
+                node_x = self.nodes[i].grid_pos[0]
+                node_y = self.nodes[i].grid_pos[1]
+                for cell in cells:
+                    x = cell.grid_pos[0]
+                    y = cell.grid_pos[1]
+
+                    print(cell.grid_pos)
+                    print(cell.num_crimes)
+
+                    # cell is located upper-left quadrant
+                    # if x < node_x and y == node_y:
+                    #     print('upper left')
+                    # elif x == node_x and y == node_y:
+                    #     print('upper right')
+                    # elif x < node_x and y < node_y:
+                    #     print('lower left')
+                    # elif x == node_x and y < node_y:
+                    #     print('lower right')
+                print('\n')
 
             # non-boundary node
             elif len(cells) == 4:
@@ -364,13 +383,13 @@ class CrimeMap:
                     p4 = Node(i + 1, j + 1, crime_map[1][i+1], crime_map[2][j+1])
                 elif i + 1 < len(crime_map[1]) and j + 1 == len(crime_map[2]):
                     p2 = Node(i + 1, j, crime_map[1][i + 1], crime_map[2][j])
-                    p4 = Node(i + 1, j + 1, crime_map[1][i + 1], crime_map[2][j])
+                    p4 = Node(i + 2, 0, crime_map[1][i + 1], crime_map[2][j])
                 elif i + 1 == len(crime_map[1]) and j + 1 < len(crime_map[2]):
                     p2 = Node(i + 1, j, crime_map[1][i], crime_map[2][j])
                     p4 = Node(i + 1, j + 1, crime_map[1][i], crime_map[2][j + 1])
                 else:
                     p2 = Node(i + 1, j, crime_map[1][i], crime_map[2][j])
-                    p4 = Node(i + 1, j + 1, crime_map[1][i], crime_map[2][j])
+                    p4 = Node(i + 2, 0, crime_map[1][i], crime_map[2][j])
 
                 # 1d representation of 2d data
                 pos1 = i * len(crime_map[1]) + j
