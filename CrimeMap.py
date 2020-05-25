@@ -13,7 +13,7 @@ import matplotlib.ticker as tkr
 import numpy as np
 from queue import PriorityQueue
 
-#TODO: When parsing info from file, make grid object containing every point (tick) on grid
+# TODO: When parsing info from file, make grid object containing every point (tick) on grid
 # this will be used by A*
 
 DIAGONAL_EDGE_COST = 1.5
@@ -188,7 +188,8 @@ class CrimeMap:
     def drawPointOnMap(self, i, j, symbol, color):
         x_node = self.grid_x_ticks[i]
         y_node = self.grid_y_ticks[j]
-        start = self.axmap.text(x_node, y_node, symbol, fontdict=dict(fontsize=8, ha='center', va='center', color=color))
+        start = self.axmap.text(x_node, y_node, symbol,
+                                fontdict=dict(fontsize=8, ha='center', va='center', color=color))
         self.gridMarkings.append(start)
         plt.draw()
 
@@ -281,8 +282,84 @@ class CrimeMap:
             if diagonal:
                 self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, diagonal))
 
-    def parseBoundaryNode(self):
-        pass
+    def addNodeEdges(self,
+                     left_h,
+                     right_h,
+                     north_v,
+                     south_v,
+                     left_h_crime,
+                     right_h_crime,
+                     north_v_crime,
+                     south_v_crime,
+                     nw_d,
+                     ne_d,
+                     sw_d,
+                     se_d,
+                     i,
+                     x,
+                     y):
+        # place node edges into node's priority queue depending on flags set.
+        # 12 possible kind of node edges can be added to the priority queue
+        # nodes that go left, right, north, south with or without crime cost
+        # nodes that go diagonally up or down toward left or right with diagonal cost
+        if left_h:
+            left_horizontal = self.getNodeByPos([x - 1, y])
+            if left_horizontal:
+                self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, left_horizontal))
+
+        if right_h:
+            right_horizontal = self.getNodeByPos([x + 1, y])
+            if right_horizontal:
+                self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, right_horizontal))
+
+        if north_v:
+            north_vertical = self.getNodeByPos([x, y + 1])
+            if north_vertical:
+                self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, north_vertical))
+
+        if south_v:
+            south_vertical = self.getNodeByPos([x, y - 1])
+            if south_vertical:
+                self.nodes[i].adjacent_nodes.put((SAFE_EDGE_COST, south_vertical))
+
+        if left_h_crime:
+            left_horizontal = self.getNodeByPos([x - 1, y])
+            if left_horizontal:
+                self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, left_horizontal))
+
+        if right_h_crime:
+            right_horizontal = self.getNodeByPos([x + 1, y])
+            if right_horizontal:
+                self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, right_horizontal))
+
+        if north_v_crime:
+            north_vertical = self.getNodeByPos([x, y + 1])
+            if north_vertical:
+                self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, north_vertical))
+
+        if south_v_crime:
+            south_vertical = self.getNodeByPos([x, y - 1])
+            if south_vertical:
+                self.nodes[i].adjacent_nodes.put((CRIME_EDGE_COST, south_vertical))
+
+        if nw_d:
+            upper_left_diagonal = self.getNodeByPos([x - 1, y + 1])
+            if upper_left_diagonal:
+                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, upper_left_diagonal))
+        if ne_d:
+            upper_right_diagonal = self.getNodeByPos([x + 1, y + 1])
+            if upper_right_diagonal:
+                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, upper_right_diagonal))
+
+        if sw_d:
+            lower_left_diagonal = self.getNodeByPos([x - 1, y - 1])
+            if lower_left_diagonal:
+                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, lower_left_diagonal))
+
+        if se_d:
+            lower_right_diagonal = self.getNodeByPos([x + 1, y - 1])
+            if lower_right_diagonal:
+                self.nodes[i].adjacent_nodes.put((DIAGONAL_EDGE_COST, lower_right_diagonal))
 
     def parseNodes(self):
         # find all the adjacent nodes for each node in grid and place them in priority queue based on actual cost
@@ -326,37 +403,84 @@ class CrimeMap:
                 # both adjacent cells are high crime and therefore no path possible from this node
                 if cells[0].is_high_crime_area and cells[1].is_high_crime_area:
                     continue
-                # one of the adjacent cells is a high crime area
-                elif cells[0].is_high_crime_area and not cells[1].is_high_crime_area:
-                    pass
-                elif not cells[0].is_high_crime_area and cells[1].is_high_crime_area:
-                    pass
-                # none of the adjacent cells are a high crime area
+                # find the possible paths from boundary node
+                # note that paths along boundary edges of graph not permitted
                 else:
-                    for cell in cells:
-                        x = cell.grid_pos[0]
-                        y = cell.grid_pos[1]
+                    x0 = cells[0].grid_pos[0]
+                    y0 = cells[0].grid_pos[1]
+                    x1 = cells[1].grid_pos[0]
+                    y1 = cells[1].grid_pos[1]
 
-                        print(cell.grid_pos)
-                        print(cell.num_crimes)
+                    # cell 1 is located lower-left quadrant and cell 2 is located in upper-left quadrant
+                    if x0 < node_x and y0 < node_y and x1 < node_x and y1 == node_y:
+                        if cells[0].is_high_crime_area:
+                            # path along horizontal and upper diagonal possible
+                            self.addNodeEdges(False, False, False, False, True, False, False, False, True, False, False,
+                                              False, i, node_x, node_y)
+                        elif cells[1].is_high_crime_area:
+                            # path along horizontal and lower diagonal possible
+                            self.addNodeEdges(False, False, False, False, True, False, False, False, False, False, True,
+                                              False, i, node_x, node_y)
+                        else:
+                            # path along horizontal and both diagonals possible
+                            self.addNodeEdges(True, False, False, False, False, False, False, False, True, False, True,
+                                              False, i, node_x, node_y)
 
-                        # cell is located upper-left quadrant
-                        if x < node_x and y == node_y:
-                            left_diagonal = [x, y + 1]
-                        # cell is located upper-right quadrant
-                        elif x == node_x and y == node_y:
-                            print('upper right')
-                        # cell is located lower-left quadrant
-                        elif x < node_x and y < node_y:
-                            print('lower left')
-                        # cell is located lower-right quadrant
-                        elif x == node_x and y < node_y:
-                            print('lower right')
-                    print('\n')
+                    # cell 1 is located lower-left quadrant and cell 2 is located in lower right quadrant
+                    elif x0 < node_x and y0 < node_y and x1 == node_x and y1 < node_y:
+                        if cells[0].is_high_crime_area:
+                            # path along lower vertical and left diagonal possible
+                            self.addNodeEdges(False, False, False, False, False, False, False, True, False, False, True,
+                                              False, i, node_x, node_y)
+                        elif cells[1].is_high_crime_area:
+                            # path along lower vertical and right diagonal possible
+                            self.addNodeEdges(False, False, False, False, False, False, False, True, False, False,
+                                              False,
+                                              True, i, node_x, node_y)
+                        else:
+                            # path along vertical and both diagonals possible
+                            self.addNodeEdges(False, False, False, True, False, False, False, False, False, False, True,
+                                              True, i, node_x, node_y)
+
+                    # cell 1 is located in lower-right quadrant and cell 2 is located in upper-right quadrant
+                    elif x0 == node_x and y0 < node_y and x1 == node_x and y1 == node_y:
+                        if cells[0].is_high_crime_area:
+                            # path along horizontal and upper diagonal possible
+                            self.addNodeEdges(False, False, False, False, False, True, False, False, False, True, False,
+                                              False, i, node_x, node_y)
+                        elif cells[1].is_high_crime_area:
+                            # path along horizontal and lower diagonal possible
+                            self.addNodeEdges(False, False, False, False, False, True, False, False, False, False,
+                                              False,
+                                              True, i, node_x, node_y)
+                        else:
+                            # path along horizontal and both diagonals possible
+                            self.addNodeEdges(False, True, False, False, False, False, False, False, False, True, False,
+                                              True, i, node_x, node_y)
+
+                    # cell 1 is located in upper-left quadrant and cell 2 is located in upper-right quandrant
+                    elif x0 < node_x and y0 == node_y and x1 == node_x and y1 == node_y:
+                        if cells[0].is_high_crime_area:
+                            # path along upper vertical and left diagonal possible
+                            self.addNodeEdges(False, False, False, False, False, False, True, False, True, False, False,
+                                              False, i, node_x, node_y)
+                        elif cells[1].is_high_crime_area:
+                            # path along upper vertical and right diagonal possible
+                            self.addNodeEdges(False, False, False, False, False, False, True, False, False, True, False,
+                                              False, i, node_x, node_y)
+                        else:
+                            # path along vertical and both diagonals possible
+                            self.addNodeEdges(False, False, True, False, False, False, False, False, True, True, False,
+                                              False, i, node_x, node_y)
 
             # non-boundary node
             elif len(cells) == 4:
-                pass
+                # all adjacent cells are high crime and therefore no path possible from this node
+                if cells[0].is_high_crime_area and cells[1].is_high_crime_area and cells[2].is_high_crime_area and cells[3].is_high_crime_area:
+                    continue
+                else:
+                    print('normal case')
+
 
     def getNodeByPos(self, pos):
         for i in self.nodes:
@@ -392,8 +516,8 @@ class CrimeMap:
 
                 # boundary checks at edges of graph
                 if i + 1 < len(crime_map[1]) and j + 1 < len(crime_map[2]):
-                    p2 = Node(i + 1, j, crime_map[1][i+1], crime_map[2][j])
-                    p4 = Node(i + 1, j + 1, crime_map[1][i+1], crime_map[2][j+1])
+                    p2 = Node(i + 1, j, crime_map[1][i + 1], crime_map[2][j])
+                    p4 = Node(i + 1, j + 1, crime_map[1][i + 1], crime_map[2][j + 1])
                 elif i + 1 < len(crime_map[1]) and j + 1 == len(crime_map[2]):
                     p2 = Node(i + 1, j, crime_map[1][i + 1], crime_map[2][j])
                     p4 = Node(i + 2, 0, crime_map[1][i + 1], crime_map[2][j])
@@ -410,7 +534,7 @@ class CrimeMap:
                 pos3 = i * len(crime_map[1]) + j + 1
                 pos4 = (i + 1) * len(crime_map[1]) + j + 1
 
-                max_num_nodes = len(crime_map[1])*len(crime_map[2])
+                max_num_nodes = len(crime_map[1]) * len(crime_map[2])
 
                 # add nodes to nodes dictionary
                 if pos1 not in self.nodes and pos1 < max_num_nodes:
@@ -482,14 +606,14 @@ class CrimeMap:
             bins=grid_dimensions,
             cmap=self.cmap,
             norm=grid_norm,
-            )
+        )
 
         self.parseCrimeMap(crime_map)
 
         padding = .001
 
-        plt.xlim(self.total_bounds[0]-padding, self.total_bounds[2]+padding)
-        plt.ylim(self.total_bounds[1]-padding, self.total_bounds[3]+padding)
+        plt.xlim(self.total_bounds[0] - padding, self.total_bounds[2] + padding)
+        plt.ylim(self.total_bounds[1] - padding, self.total_bounds[3] + padding)
 
         self.axmap.xaxis.set_minor_locator(tkr.AutoMinorLocator(n=5))
         self.axmap.yaxis.set_minor_locator(tkr.AutoMinorLocator(n=5))
@@ -532,7 +656,7 @@ class CrimeMap:
                     margin_horizontal = self.grid_x_ticks[x] + text_padding
                     margin_vertical = self.grid_y_ticks[y] + text_padding
                     text = self.axmap.text(margin_horizontal, margin_vertical, display_val,
-                                      fontdict=dict(fontsize=3, ha='center', va='center'))
+                                           fontdict=dict(fontsize=3, ha='center', va='center'))
                     self.grid_display_text.append(text)
 
     def displayPlotInfoTitle(self):
@@ -561,7 +685,6 @@ class CrimeMap:
             end,
         ))
 
-
         # display info
         plt.title(textstr, fontsize=8)
 
@@ -586,9 +709,9 @@ class CrimeMap:
 
     def drawLine(self, x1, y1, x2, y2):
         annotation = self.axmap.annotate("",
-                            xy=(x1, y1), xycoords='data',
-                            xytext=(x2, y2), textcoords='data',
-                            arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."),)
+                                         xy=(x1, y1), xycoords='data',
+                                         xytext=(x2, y2), textcoords='data',
+                                         arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."), )
         self.gridMarkings.append(annotation)
 
     def searchHeuristic(self):
@@ -602,7 +725,8 @@ class CrimeMap:
             return
 
         # Create start and end node
-        start_node = Node(self.start[0], self.start[1], self.grid_x_ticks[self.start[0]], self.grid_y_ticks[self.start[1]])
+        start_node = Node(self.start[0], self.start[1], self.grid_x_ticks[self.start[0]],
+                          self.grid_y_ticks[self.start[1]])
         start_node.g = start_node.h = start_node.f = 0
         goal_node = Node(self.goal[0], self.goal[1], self.grid_x_ticks[self.goal[0]], self.grid_y_ticks[self.goal[1]])
         goal_node.g = goal_node.h = goal_node.f = 0
@@ -639,8 +763,8 @@ class CrimeMap:
                 for i in range(0, len(path) - 2):
                     x1 = path[i].x_tick
                     y1 = path[i].y_tick
-                    x2 = path[i+1].x_tick
-                    y2 = path[i+1].y_tick
+                    x2 = path[i + 1].x_tick
+                    y2 = path[i + 1].y_tick
                     self.drawLine(x1, y1, x2, y2)
                     plt.show()
 
@@ -688,12 +812,12 @@ class CrimeMap:
             #     # Add the child to the open list
             #     open_list.append(child)
 
-
         # x1 = self.grid_x_ticks[self.start[0]]
         # y1 = self.grid_y_ticks[self.start[1]]
         # x2 = self.grid_x_ticks[self.goal[0]]
         # y2 = self.grid_y_ticks[self.goal[1]]
         # self.drawLine(x1, y1, x2, y2)
+
 
 def main():
     crimes_map = CrimeMap()
