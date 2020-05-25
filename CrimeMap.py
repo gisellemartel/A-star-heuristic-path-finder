@@ -79,6 +79,14 @@ class Node:
 
         print('\n')
 
+    def displayPriorityQ(self):
+        for i in range(self.adjacent_nodes.qsize()):
+            temp = self.adjacent_nodes.get()
+            self.adjacent_nodes.put(temp)
+            print(temp[0])
+            print('h: ' + str(temp[1].h) + ', g: ' + str(temp[1].g) + ', f: ' + str(temp[1].f))
+        print('\n')
+
 
 def findPositionOfTick(grid_ticks, p):
     # if user selects point that is not grid tick, it will select the tick to the left of the point on x-axis
@@ -414,9 +422,9 @@ class CrimeMap:
                     continue
                 else:
                     # all diagonals that fall within a low crime area cell are valid paths
-                    for i in range(0, len(cells)):
-                        if not cells[i].is_high_crime_area:
-                            x, y = cells[i].grid_pos
+                    for j in range(0, len(cells)):
+                        if not cells[j].is_high_crime_area:
+                            x, y = cells[j].grid_pos
                             # bottom left
                             if x < node_x and y < node_y:
                                 self.addNodeToPriorityQ(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
@@ -538,15 +546,12 @@ class CrimeMap:
                     self.addAdjacentCellToNode(pos4, cell)
 
                     self.cells.append(cell)
-
-        # debug
-        # for cell in self.cells:
-        #     cell.display()
-        #
-        # for node in self.nodes:
-        #     self.nodes[node].display()
-
+        # parse each node to make the priorityQueue adjacencyList
         self.parseNodes()
+
+        for node in self.nodes:
+            print(node)
+            self.nodes[node].displayPriorityQ()
 
     def updateMap(self):
         # get the horizontal-vertical size of grid (X*Y)
