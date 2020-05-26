@@ -739,7 +739,7 @@ class CrimeMap:
                         temp = current_node
                         current_node = next_node
                         next_node.parent = temp
-                        current_index = next_node
+                        current_index = current_index + 1
 
 
             # Pop current off open list, add to closed list
