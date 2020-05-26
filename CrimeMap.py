@@ -289,7 +289,6 @@ class CrimeMap:
     def add_node_to_priority_q(self, i, pos, cost):
         node = self.get_node_by_pos(pos)
         if node:
-            node.g = cost
             self.nodes[i].adjacent_nodes.put((cost, node))
 
     def parse_nodes(self):
@@ -724,18 +723,24 @@ class CrimeMap:
 
         # add start node to open list
         open_list.append(start_node)
-
         # Loop until you find the end
         while len(open_list) > 0:
             # Get the current node
-            current_node = open_list[0]
             current_index = 0
-            for index, item in enumerate(open_list):
-                if item.f < current_node.f:
-                    temp = current_node
-                    current_node = item
-                    item.parent = temp
-                    current_index = index
+            current_node = open_list[current_index]
+
+            if current_index + 1 < len(open_list):
+                for i in range(current_index + 1, len(open_list)):
+                    next_node = open_list[i]
+                    if next_node.f < current_node.f:
+                        x1, y1 = current_node.lat_long
+                        x2, y2 = next_node.lat_long
+                        self.draw_path_line(x1, y1, x2, y2)
+                        temp = current_node
+                        current_node = next_node
+                        next_node.parent = temp
+                        current_index = next_node
+
 
             # Pop current off open list, add to closed list
             open_list.pop(current_index)
@@ -754,55 +759,33 @@ class CrimeMap:
                     y1 = path[i].lat_long[1]
                     x2 = path[i + 1].lat_long[0]
                     y2 = path[i + 1].lat_long[1]
-                    self.draw_path_line(x1, y1, x2, y2)
+                    # self.draw_path_line(x1, y1, x2, y2)
                 plt.show()
 
-            # # Generate children
-            # children = []
-            # for adj_node in current_node.adjacent_nodes:  # Adjacent squares
-            #
-            #     # Get node position
-            #     node_position = (current_node.grid_pos[0] + adj_node.grid_pos[0], current_node.grid_pos[1] + adj_node.grid_pos[1])
-            #
-            #     # # Make sure within range
-            #     # if node_position[0] > (len(self.cells) - 1) or node_position[0] < 0 or node_position[1] > (
-            #     #         len(self.cells[len(self.cells) - 1]) - 1) or node_position[1] < 0:
-            #     #     continue
-            #
-            #     # Make sure walkable terrain
-            #     if self.cells[node_position[0]][node_position[1]] != 0:
-            #         continue
-            #
-            #     # Create new node
-            #     new_node = Node(current_node, node_position)
-            #
-            #     # Append
-            #     children.append(new_node)
-
             # Loop through children
-            q = current_node.adjacent_nodes.queue
-            for i in range(0, len(q)):
+            while not current_node.adjacent_nodes.empty():
+                child = current_node.adjacent_nodes.get()
 
-                child = q[i][1]
+                cost = child[0]
+                child_node = child[1]
 
                 # Child is on the closed list
                 for closed_child in closed_list:
-                    if child == closed_child:
+                    if child_node == closed_child:
                         continue
 
                 # Create the f, g, and h values
-                child.g = current_node.g + 1
-                child.h = ((child.grid_pos[0] - goal_node.grid_pos[0]) ** 2) + (
-                            (child.grid_pos[1] - goal_node.grid_pos[1]) ** 2)
-                child.f = child.g + child.h
+                child_node.g = cost
+                child_node.h = 0
+                child_node.f = child_node.g + child_node.h
 
                 # Child is already in the open list
                 for open_node in open_list:
-                    if child == open_node and child.g > open_node.g:
+                    if child_node == open_node and child_node.g > open_node.g:
                         continue
 
                 # Add the child to the open list
-                open_list.append(child)
+                open_list.append(child_node)
 
         # x1 = self.grid_x_ticks[self.start[0]]
         # y1 = self.grid_y_ticks[self.start[1]]
