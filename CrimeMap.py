@@ -509,26 +509,9 @@ class CrimeMap:
             for j in range(0, len(crimes) + 1):
 
                 p1 = Node(i, j, crime_map[1][i], crime_map[2][j])
-
-                # boundary checks at edges of graph
-                if j + 1 < len(crime_map[2]):
-                    p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j + 1])
-                else:
-                    p3 = Node(i, j + 1, crime_map[1][i], crime_map[2][j])
-
-                # boundary checks at edges of graph
-                if i + 1 < len(crime_map[1]) and j + 1 < len(crime_map[2]):
-                    p2 = Node(i + 1, j, crime_map[1][i + 1], crime_map[2][j])
-                    p4 = Node(i + 1, j + 1, crime_map[1][i + 1], crime_map[2][j + 1])
-                elif i + 1 < len(crime_map[1]) and j + 1 == len(crime_map[2]):
-                    p2 = Node(i + 1, j, crime_map[1][i + 1], crime_map[2][j])
-                    p4 = Node(i + 2, 0, crime_map[1][i + 1], crime_map[2][j])
-                elif i + 1 == len(crime_map[1]) and j + 1 < len(crime_map[2]):
-                    p2 = Node(i + 1, j, crime_map[1][i], crime_map[2][j])
-                    p4 = Node(i + 1, j + 1, crime_map[1][i], crime_map[2][j + 1])
-                else:
-                    p2 = Node(i + 1, j, crime_map[1][i], crime_map[2][j])
-                    p4 = Node(i + 2, 0, crime_map[1][i], crime_map[2][j])
+                p2 = Node((i + 1) % len(crime_map[2]), j, crime_map[1][(i + 1) % len(crime_map[2])], crime_map[2][j])
+                p4 = Node((i + 1) % len(crime_map[2]), (j + 1) % len(crime_map[2]), crime_map[1][(i + 1) % len(crime_map[2])], crime_map[2][(j + 1) % len(crime_map[2])])
+                p3 = Node(i, (j + 1) % len(crime_map[2]), crime_map[1][i], crime_map[2][(j + 1) % len(crime_map[2])])
 
                 # 1d representation of 2d data
                 pos1 = i * len(crime_map[1]) + j
@@ -703,14 +686,18 @@ class CrimeMap:
         return [x_pos, y_pos]
 
     def draw_path_line(self, x1, y1, x2, y2):
+        # ax = plt.gca()
+        # line=self.axmap.plot([x1, x2], [y1, y2])
+        # plt.pause(0.000001)
+        # self.grid_markings.append(line)
         annotation = self.axmap.annotate("",
                                          xy=(x1, y1), xycoords='data',
                                          xytext=(x2, y2), textcoords='data',
-                                         arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."), )
+                                         arrowprops=dict(arrowstyle="-", edgecolor='black', linewidth=1, alpha=0.9, connectionstyle="arc3,rad=0"), )
         self.grid_markings.append(annotation)
 
-    def search_heuristic(self):
-        pass
+    def search_heuristic(self, child_node, goal_node):
+        return 0
 
     def a_star_search(self):
 
@@ -749,17 +736,14 @@ class CrimeMap:
                     current = current.parent
                 path = path[::-1]
                 time_elapsed = time.time() - start_time
+                print('A* search found shortest path sucessfully in ' + str(time_elapsed) + " seconds. Drawing path...")
                 # print the path
                 for i in range(0, len(path) - 1):
                     x1 = path[i].lat_long[0]
                     y1 = path[i].lat_long[1]
                     x2 = path[i + 1].lat_long[0]
                     y2 = path[i + 1].lat_long[1]
-                    # self.draw_path_line(x1, y1, x2, y2)
-                    ax = plt.gca()
-                    ax.plot([x1, x2], [y1, y2])
-                    plt.draw()
-                    plt.pause(0.000001)
+                    self.draw_path_line(x1, y1, x2, y2)
 
                 goal_found = True
                 break
@@ -770,17 +754,17 @@ class CrimeMap:
             # Loop through children
             for cost, child_node in current_node.adjacent_nodes.queue:
                 # debug
-                ax = plt.gca()
-                ax.plot([child_node.lat_long[0], current_node.lat_long[0]], [child_node.lat_long[1], current_node.lat_long[1]])
-                plt.draw()
-                plt.pause(0.001)
+                # ax = plt.gca()
+                # ax.plot([child_node.lat_long[0], current_node.lat_long[0]], [child_node.lat_long[1], current_node.lat_long[1]])
+                # plt.draw()
+                # plt.pause(0.00001)
 
                 # set the actual cost
                 child_node.g = cost
                 child_node.cumulative_g = cost + current_node.cumulative_g
                 # TODO: heuristic should be approixmation of number of diagonal and orthogonal steps
-                # TODO: child_node.h = heuristic(child_node, goal_node)
-                # TODO add this line: child_node.f =  child_node.cumulative_g + child_node.h
+                child_node.h = self.search_heuristic(child_node, goal_node)
+                child_node.f =  child_node.cumulative_g + child_node.h
 
                 print(child_node.cumulative_g)
 
@@ -815,8 +799,7 @@ class CrimeMap:
 
         if not goal_found:
             print('Error, was not able to find a valid path for the selcted start and goal!')
-        else:
-            print('A* search found shortest path sucessfully in ' + str(time_elapsed) + " seconds")
+
         plt.show()
 
 
