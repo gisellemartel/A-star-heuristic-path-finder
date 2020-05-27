@@ -14,6 +14,9 @@ import matplotlib.ticker as tkr
 import geopandas as gpd
 import numpy as np
 from queue import PriorityQueue
+import time
+
+MAX_SEARCH_TIME = 10
 
 DIAGONAL_EDGE_COST = 1.5
 CRIME_EDGE_COST = 1.2
@@ -147,7 +150,7 @@ class CrimeMap:
 
         self.start = -1
         self.goal = -1
-        self.gridMarkings = []
+        self.grid_markings = []
         self.grid_size = 0
 
         # data to be used by A*
@@ -199,14 +202,14 @@ class CrimeMap:
         y_node = self.grid_y_ticks[j]
         start = self.axmap.text(x_node, y_node, symbol,
                                 fontdict=dict(fontsize=8, ha='center', va='center', color=color))
-        self.gridMarkings.append(start)
+        self.grid_markings.append(start)
         plt.draw()
 
     def clear_points_on_map(self):
-        for marking in self.gridMarkings:
+        for marking in self.grid_markings:
             marking.remove()
             marking = None
-        self.gridMarkings = []
+        self.grid_markings = []
 
     def on_pick_map_coordinate(self, artist, mouseevent):
         # get the point the user selected on grid
@@ -296,178 +299,6 @@ class CrimeMap:
         if node:
             self.nodes[i].adjacent_nodes.put((cost, node))
 
-    # def get_neighbours(self, current_node):
-    #     # get the adj cells of the current node
-    #     cells = current_node.adjacent_cells
-    #     node_x, node_y = current_node.grid_pos
-    #
-    #     # node is one of 4 grid corners
-    #     if len(cells) == 1:
-    #         cell = cells[0]
-    #
-    #         # bottom left
-    #         if cell.grid_pos == [0, 0]:
-    #             self.parse_corner_node(i, cell, [0, 0])
-    #
-    #         # top left
-    #         elif cell.grid_pos == [0, self.grid_size - 1]:
-    #             self.parse_corner_node(i, cell, [0, self.grid_size - 1])
-    #
-    #         # bottom right
-    #         elif cell.grid_pos == [self.grid_size - 1, 0]:
-    #             self.parse_corner_node(i, cell, [self.grid_size - 1, 0])
-    #
-    #         # top right
-    #         elif cell.grid_pos == [self.grid_size - 1, self.grid_size - 1]:
-    #             self.parse_corner_node(i, cell, [self.grid_size - 1, self.grid_size - 1])
-    #
-    #     # node is a non-corner boundary node
-    #     elif len(cells) == 2:
-    #         # both adjacent cells are high crime and therefore no path possible from this node
-    #         if cells[0].is_high_crime_area and cells[1].is_high_crime_area:
-    #             return
-    #
-    #         # find the possible paths from boundary node
-    #         # note that paths along boundary edges of graph not permitted
-    #         else:
-    #             x0, y0 = cells[0].grid_pos
-    #             x1, y1 = cells[1].grid_pos
-    #
-    #             # cell 1 is located lower-left quadrant and cell 2 is located in upper-left quadrant
-    #             if x0 < node_x and y0 < node_y and x1 < node_x and y1 == node_y:
-    #                 if cells[0].is_high_crime_area:
-    #                     # path along left horizontal possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y], CRIME_EDGE_COST)
-    #                     # path along upper left diagonal possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                 elif cells[1].is_high_crime_area:
-    #                     # path along left horizontal possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y], CRIME_EDGE_COST)
-    #                     # path along lower left diagonal possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #                 else:
-    #                     # path along left horizontal possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y], SAFE_EDGE_COST)
-    #                     # path along both left diagonals possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #
-    #             # cell 1 is located lower-left quadrant and cell 2 is located in lower right quadrant
-    #             elif x0 < node_x and y0 < node_y and x1 == node_x and y1 < node_y:
-    #                 if cells[0].is_high_crime_area:
-    #                     # path along lower vertical possible
-    #                     self.add_node_to_priority_q(i, [node_x, node_y - 1], CRIME_EDGE_COST)
-    #                     # path along lower left diagonal possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #                 elif cells[1].is_high_crime_area:
-    #                     # path along lower vertical possible
-    #                     self.add_node_to_priority_q(i, [node_x, node_y - 1], CRIME_EDGE_COST)
-    #                     # path along lower right diagonal possible
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #                 else:
-    #                     # path along lower vertical possible
-    #                     self.add_node_to_priority_q(i, [node_x, node_y - 1], SAFE_EDGE_COST)
-    #                     # path along both lower diagonals possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #
-    #             # cell 1 is located in lower-right quadrant and cell 2 is located in upper-right quadrant
-    #             elif x0 == node_x and y0 < node_y and x1 == node_x and y1 == node_y:
-    #                 if cells[0].is_high_crime_area:
-    #                     # path along right horizontal possible
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y], CRIME_EDGE_COST)
-    #                     # path along upper right diagonal possible
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                 elif cells[1].is_high_crime_area:
-    #                     # path along right horizontal possible
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y], CRIME_EDGE_COST)
-    #                     # path along lower right diagonal possible
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #                 else:
-    #                     # path along right horizontal possible
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y], SAFE_EDGE_COST)
-    #                     # path along both right diagonals possible
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #
-    #             # cell 1 is located in upper-left quadrant and cell 2 is located in upper-right quandrant
-    #             elif x0 < node_x and y0 == node_y and x1 == node_x and y1 == node_y:
-    #                 if cells[0].is_high_crime_area:
-    #                     # path along upper vertical possible
-    #                     self.add_node_to_priority_q(i, [node_x, node_y + 1], CRIME_EDGE_COST)
-    #                     # path along upper left diagonal possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                 elif cells[1].is_high_crime_area:
-    #                     # path along upper vertical possible
-    #                     self.add_node_to_priority_q(i, [node_x, node_y + 1], CRIME_EDGE_COST)
-    #                     # path along upper right diagonal possible
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                 else:
-    #                     # path along upper vertical possible
-    #                     self.add_node_to_priority_q(i, [node_x, node_y + 1], SAFE_EDGE_COST)
-    #                     # path along both upper diagonals possible
-    #                     self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                     self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #
-    #     # non-boundary node
-    #     elif len(cells) == 4:
-    #         # all adjacent cells are high crime and therefore no path possible from this node
-    #         if cells[0].is_high_crime_area and cells[1].is_high_crime_area and cells[2].is_high_crime_area and \
-    #                 cells[3].is_high_crime_area:
-    #             continue
-    #         else:
-    #             pass
-    #             # all diagonals that fall within a low crime area cell are valid paths
-    #             for j in range(0, len(cells)):
-    #                 if not cells[j].is_high_crime_area:
-    #                     x, y = cells[j].grid_pos
-    #                     # bottom left
-    #                     if x < node_x and y < node_y:
-    #                         self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #                     # top left
-    #                     elif x < node_x and y == node_y:
-    #                         self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                     # bottom right
-    #                     elif x == node_x and y < node_y:
-    #                         self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
-    #                     # top right
-    #                     elif x == node_x and y == node_y:
-    #                         self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
-    #                     else:
-    #                         print('SOMETHING WENT WRONG _ _ _ _ _ _ _ _ _ _ _ _ _ ')
-    #
-    #             # horizontal and vertical paths
-    #             # left horizontal
-    #             if cells[0].is_high_crime_area and cells[1].is_high_crime_area:
-    #                 pass
-    #             elif not cells[0].is_high_crime_area and not cells[1].is_high_crime_area:
-    #                 self.add_node_to_priority_q(i, [node_x - 1, node_y], SAFE_EDGE_COST)
-    #             elif not cells[0].is_high_crime_area or not cells[1].is_high_crime_area:
-    #                 self.add_node_to_priority_q(i, [node_x - 1, node_y], CRIME_EDGE_COST)
-    #
-    #             # right horizontal
-    #             if cells[2].is_high_crime_area and cells[3].is_high_crime_area:
-    #                 pass
-    #             elif not cells[2].is_high_crime_area and not cells[3].is_high_crime_area:
-    #                 self.add_node_to_priority_q(i, [node_x + 1, node_y], SAFE_EDGE_COST)
-    #             elif not cells[2].is_high_crime_area or not cells[3].is_high_crime_area:
-    #                 self.add_node_to_priority_q(i, [node_x + 1, node_y], CRIME_EDGE_COST)
-    #
-    #             # north vertical
-    #             if cells[1].is_high_crime_area and cells[3].is_high_crime_area:
-    #                 pass
-    #             elif not cells[1].is_high_crime_area and not cells[3].is_high_crime_area:
-    #                 self.add_node_to_priority_q(i, [node_x, node_y + 1], SAFE_EDGE_COST)
-    #             elif not cells[1].is_high_crime_area or not cells[3].is_high_crime_area:
-    #                 self.add_node_to_priority_q(i, [node_x, node_y + 1], CRIME_EDGE_COST)
-    #
-    #             # south vertical
-    #             if cells[0].is_high_crime_area and cells[2].is_high_crime_area:
-    #                 pass
-    #             elif not cells[0].is_high_crime_area and not cells[2].is_high_crime_area:
-    #                 self.add_node_to_priority_q(i, [node_x, node_y - 1], SAFE_EDGE_COST)
-    #             elif not cells[0].is_high_crime_area or not cells[2].is_high_crime_area:
-    #                 self.add_node_to_priority_q(i, [node_x, node_y - 1], CRIME_EDGE_COST)
 
     def parse_nodes(self):
         # find all the adjacent nodes for each node in grid and place them in priority queue based on actual cost
@@ -797,11 +628,7 @@ class CrimeMap:
 
     def calc_grid_dimensions(self):
         # get the bounds of the whole crime area
-        min_x = self.total_bounds[0]
-        min_y = self.total_bounds[1]
-        max_x = self.total_bounds[2]
-        max_y = self.total_bounds[3]
-
+        min_x, min_y, max_x, max_y = self.total_bounds
         # get num cells on x and y axis of grid based on bounds of crime area and step size
         x_grid_steps = np.ceil((max_x - min_x) / self.step_size)
         y_grid_steps = np.ceil((max_y - min_y) / self.step_size)
@@ -880,7 +707,7 @@ class CrimeMap:
                                          xy=(x1, y1), xycoords='data',
                                          xytext=(x2, y2), textcoords='data',
                                          arrowprops=dict(arrowstyle="-", connectionstyle="arc3,rad=0."), )
-        self.gridMarkings.append(annotation)
+        self.grid_markings.append(annotation)
 
     def search_heuristic(self):
         pass
@@ -896,6 +723,9 @@ class CrimeMap:
         start_node = self.get_node_by_pos(self.start)
         goal_node = self.get_node_by_pos(self.goal)
 
+        start_time = time.time()
+        time_elapsed = 0.0
+
         # create empty open and closed lists
         open_list = PriorityQueue()
         closed_list = []
@@ -903,25 +733,12 @@ class CrimeMap:
         # add start node to open list
         open_list.put((0.0, start_node))
 
-        # Loop goal is found or all possible nodes visited
-        while not open_list.empty():
-            # Get the current node from open list
-            current_index = 0
-            current_cost, current_node = open_list.get()
+        goal_found = False
 
-            # min_cost = current_node.g + current_node.h
-            #
-            # # find the node with the min cost
-            # for i in range(1, len(open_list)):
-            #     next_node = open_list[i]
-            #     next_node.f = next_node.cumulative_g + next_node.h
-            #     if next_node.f < min_cost:
-            #         min_cost = next_node.f
-            #         current_node = next_node
-            #         current_index = i
-            #
-            # # Pop current off open list, add to closed list
-            # open_list.pop(current_index)
+        # Loop goal is found or all possible nodes visited
+        while not open_list.empty() and time_elapsed < MAX_SEARCH_TIME:
+            # Get the current node from open list
+            current_cost, current_node = open_list.get()
 
             # We have found the goal
             if current_node == goal_node:
@@ -931,6 +748,7 @@ class CrimeMap:
                     path.append(current)
                     current = current.parent
                 path = path[::-1]
+                time_elapsed = time.time() - start_time
                 # print the path
                 for i in range(0, len(path) - 1):
                     x1 = path[i].lat_long[0]
@@ -940,9 +758,10 @@ class CrimeMap:
                     # self.draw_path_line(x1, y1, x2, y2)
                     ax = plt.gca()
                     ax.plot([x1, x2], [y1, y2])
-                    print('DRAW')
                     plt.draw()
-                    plt.pause(0.00001)
+                    plt.pause(0.000001)
+
+                goal_found = True
                 break
 
             # add node to closed list once it has been visited
@@ -950,6 +769,7 @@ class CrimeMap:
 
             # Loop through children
             for cost, child_node in current_node.adjacent_nodes.queue:
+                # debug
                 # ax = plt.gca()
                 # ax.plot([child_node.lat_long[0], current_node.lat_long[0]], [child_node.lat_long[1], current_node.lat_long[1]])
                 # plt.draw()
@@ -959,17 +779,21 @@ class CrimeMap:
                 child_node.g = cost
                 child_node.cumulative_g = cost + current_node.cumulative_g
                 # TODO: heuristic should be approixmation of number of diagonal and orthogonal steps
-                # TODO: child_node.f =  child_node.cumulative_g + child_node.h
+                # TODO: child_node.h = heuristic(child_node, goal_node)
+                # TODO add this line: child_node.f =  child_node.cumulative_g + child_node.h
 
                 print(child_node.cumulative_g)
 
                 queue_nodes = [n for _,n in open_list.queue]
                 if child_node not in closed_list and child_node not in queue_nodes:
+                    # if we have not yet visited or placed this node in the queue, then set its parent
                     child_node.parent = current_node
                     open_list.put((child_node.cumulative_g, child_node))
                 elif child_node in queue_nodes:
                     cost_node_pairs = open_list.queue
                     new_pq_items = []
+                    # if any nodes are replaced with an updated cost
+                    # we need to set a flag to replace the priority queue with updated costs
                     should_replace = False
                     for c, n in cost_node_pairs:
                         # if same node is already in queue but with lower cost,
@@ -987,31 +811,12 @@ class CrimeMap:
                         for c_n_pair in new_pq_items:
                             open_list.put(c_n_pair)
 
+                time_elapsed = time.time() - start_time
 
-
-
-
-                # # if child is in open list we do not need to add it again to the list
-                # if is_in_list(child_node, open_list) and child_node.g <= cost:
-                #     continue
-                #
-                # # if child is in closed list it has already been visited
-                # elif is_in_list(child_node, closed_list):
-                #     if child_node.g <= cost:
-                #         continue
-                #     else:
-                #         closed_list.remove(child_node)
-                #         open_list.append(child_node)
-                #
-                # # add the child to the open list
-                # else:
-                #     open_list.append(child_node)
-                #     # TODO: set the heuristic distance to the goal node
-                #     child_node.h = 0
-
-
-
-        print('Done')
+        if not goal_found:
+            print('Error, was not able to find a valid path for the selcted start and goal!')
+        else:
+            print('A* search found shortest path sucessfully in ' + str(time_elapsed) + " seconds")
         plt.show()
 
 
