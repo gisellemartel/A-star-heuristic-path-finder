@@ -1,15 +1,16 @@
 # -------------------------------------------------------
 # Assignment 1
 # Written by Giselle Martel 26352936
-# For COMP 472 Section JX – Summer 2020
+# For COMP 472 Section JX - Summer 2020
 # --------------------------------------------------------
 
-import geopandas as gpd
 import matplotlib
+matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.widgets import Slider, Button
 import matplotlib.ticker as tkr
+import geopandas as gpd
 import numpy as np
 from queue import PriorityQueue
 
