@@ -16,7 +16,7 @@ import numpy as np
 from queue import PriorityQueue
 import time
 
-MAX_SEARCH_TIME = 10
+MAX_SEARCH_TIME = 100
 
 DIAGONAL_EDGE_COST = 1.5
 CRIME_EDGE_COST = 1.2
@@ -770,10 +770,10 @@ class CrimeMap:
             # Loop through children
             for cost, child_node in current_node.adjacent_nodes.queue:
                 # debug
-                # ax = plt.gca()
-                # ax.plot([child_node.lat_long[0], current_node.lat_long[0]], [child_node.lat_long[1], current_node.lat_long[1]])
-                # plt.draw()
-                # plt.pause(0.00001)
+                ax = plt.gca()
+                ax.plot([child_node.lat_long[0], current_node.lat_long[0]], [child_node.lat_long[1], current_node.lat_long[1]])
+                plt.draw()
+                plt.pause(0.001)
 
                 # set the actual cost
                 child_node.g = cost
