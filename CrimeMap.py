@@ -5,7 +5,8 @@
 # --------------------------------------------------------
 
 import matplotlib
-matplotlib.use('TKAgg')
+
+# matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.widgets import Slider, Button
@@ -419,7 +420,8 @@ class CrimeMap:
             # non-boundary node
             elif len(cells) == 4:
                 # all adjacent cells are high crime and therefore no path possible from this node
-                if cells[0].is_high_crime_area and cells[1].is_high_crime_area and cells[2].is_high_crime_area and cells[3].is_high_crime_area:
+                if cells[0].is_high_crime_area and cells[1].is_high_crime_area and cells[2].is_high_crime_area and \
+                        cells[3].is_high_crime_area:
                     continue
                 else:
                     pass
@@ -729,23 +731,18 @@ class CrimeMap:
             # Get the current node
             current_index = 0
             current_node = open_list[current_index]
+            min_cost = current_node.g + current_node.h
 
-            if current_index + 1 < len(open_list):
-                for i in range(current_index + 1, len(open_list)):
-                    next_node = open_list[i]
-                    if next_node.f < current_node.f:
-                        x1, y1 = current_node.lat_long
-                        x2, y2 = next_node.lat_long
-                        self.draw_path_line(x1, y1, x2, y2)
-                        temp = current_node
-                        current_node = next_node
-                        next_node.parent = temp
-                    current_index = current_index + 1
-
+            for i in range(1, len(open_list)):
+                next_node = open_list[i]
+                next_node.f = next_node.g + next_node.h
+                if next_node.f < min_cost:
+                    min_cost = next_node.f
+                    current_node = next_node
+                    current_index = i
 
             # Pop current off open list, add to closed list
             open_list.pop(current_index)
-            closed_list.append(current_node)
 
             # Found the goal
             if current_node == goal_node:
@@ -760,8 +757,9 @@ class CrimeMap:
                     y1 = path[i].lat_long[1]
                     x2 = path[i + 1].lat_long[0]
                     y2 = path[i + 1].lat_long[1]
-                    # self.draw_path_line(x1, y1, x2, y2)
+                    self.draw_path_line(x1, y1, x2, y2)
                 plt.show()
+                break
 
             # Loop through children
             while not current_node.adjacent_nodes.empty():
@@ -770,29 +768,33 @@ class CrimeMap:
                 cost = child[0]
                 child_node = child[1]
 
-                # Child is on the closed list
-                for closed_child in closed_list:
-                    if child_node == closed_child:
-                        continue
+                if cost < 1.5:
+                    cost = cost +  1
+                else:
+                    cost = cost + 1.4
 
-                # Create the f, g, and h values
+                # if child is in open list
+                if is_in_list(child_node, open_list) and child_node.g <= cost:
+                    continue
+
+                elif is_in_list(child_node, closed_list):
+                    if child_node.g <= cost:
+                        continue
+                    else:
+                        closed_list.remove(child_node)
+                        open_list.append(child_node)
+
+                else:
+                    open_list.append(child_node)
+                    # TODO: set the heuristic distance to the goal node
+                    child_node.h = 0
+
                 child_node.g = cost
-                child_node.h = 0
-                child_node.f = child_node.g + child_node.h
+                child_node.parent = current_node
 
-                # Child is already in the open list
-                for open_node in open_list:
-                    if child_node == open_node and child_node.g > open_node.g:
-                        continue
+            closed_list.append(current_node)
 
-                # Add the child to the open list
-                open_list.append(child_node)
-
-        # x1 = self.grid_x_ticks[self.start[0]]
-        # y1 = self.grid_y_ticks[self.start[1]]
-        # x2 = self.grid_x_ticks[self.goal[0]]
-        # y2 = self.grid_y_ticks[self.goal[1]]
-        # self.drawLine(x1, y1, x2, y2)
+        print('Done')
 
 
 def main():
