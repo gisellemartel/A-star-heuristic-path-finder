@@ -6,7 +6,7 @@
 
 import matplotlib
 
-# matplotlib.use('TKAgg')
+matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.widgets import Slider, Button
@@ -119,8 +119,6 @@ class CrimeMap:
 
     def __init__(self):
         # create the plot figure
-        self.fig, self.ax = plt.subplots(figsize=(7, 11))
-
         # read data from shp file and fetch attribute containing crime point data
         self.data = gpd.read_file("./Shape/crime_dt.shp")
 
@@ -151,6 +149,7 @@ class CrimeMap:
         self.start = -1
         self.goal = -1
         self.grid_markings = []
+        self.plot_lines = []
         self.grid_size = 0
 
         # data to be used by A*
@@ -164,12 +163,11 @@ class CrimeMap:
     def plot_crime_map(self):
         plt.ion()
         plt.rcParams.update({'figure.dpi': 200, 'font.size': 5})
-        matplotlib.use("TkAgg")
         # set layout of figures
-        axthreshold = plt.axes([0.2, 0.05, 0.5, 0.03])
-        axcell = plt.axes([0.2, 0.1, 0.5, 0.03])
+        axthreshold = plt.axes([0.2, 0.02, 0.5, 0.03])
+        axcell = plt.axes([0.2, 0.1, 0.4, 0.03])
         axtoggle = plt.axes([0.77, 0.05, 0.05, 0.05])
-        self.axmap = plt.axes([0.1, 0.25, 0.7, 0.7])
+        self.axmap = plt.axes([0.1, 0.2, 0.7, 0.7])
 
         self.update_crime_map()
 
@@ -193,6 +191,7 @@ class CrimeMap:
         scell.on_changed(update)
         btoggle.on_clicked(self.on_press_data_toggle)
         plt.ioff()
+
         self.axmap.set_picker(self.on_pick_map_coordinate)
 
         plt.show()
@@ -208,17 +207,20 @@ class CrimeMap:
     def clear_points_on_map(self):
         for marking in self.grid_markings:
             marking.remove()
-            marking = None
         self.grid_markings = []
+
+        for line in self.plot_lines:
+            line.set_xdata([])
+            line.set_ydata([])
+            line.remove()
+        self.plot_lines = []
 
     def on_pick_map_coordinate(self, artist, mouseevent):
         # get the point the user selected on grid
         x, y = mouseevent.xdata, mouseevent.ydata
 
         # if the user selected invalid area outside bounds of grid
-        if x is None or y is None \
-                or x < self.total_bounds[0] or x > self.total_bounds[2] \
-                or y < self.total_bounds[1] or y > self.total_bounds[3]:
+        if x is None or y is None:
             return True, {}
 
         # if the start point is not set
@@ -298,7 +300,6 @@ class CrimeMap:
         node = self.get_node_by_pos(pos)
         if node:
             self.nodes[i].adjacent_nodes.put((cost, node))
-
 
     def parse_nodes(self):
         # find all the adjacent nodes for each node in grid and place them in priority queue based on actual cost
@@ -592,7 +593,7 @@ class CrimeMap:
 
         self.parse_crime_map(crime_map)
 
-        padding = .001
+        padding = 0
 
         plt.xlim(self.total_bounds[0] - padding, self.total_bounds[2] + padding)
         plt.ylim(self.total_bounds[1] - padding, self.total_bounds[3] + padding)
@@ -687,14 +688,14 @@ class CrimeMap:
 
     def draw_path_line(self, x1, y1, x2, y2):
         # ax = plt.gca()
-        # line=self.axmap.plot([x1, x2], [y1, y2])
-        # plt.pause(0.000001)
-        # self.grid_markings.append(line)
-        annotation = self.axmap.annotate("",
-                                         xy=(x1, y1), xycoords='data',
-                                         xytext=(x2, y2), textcoords='data',
-                                         arrowprops=dict(arrowstyle="-", edgecolor='black', linewidth=1, alpha=0.9, connectionstyle="arc3,rad=0"), )
-        self.grid_markings.append(annotation)
+        line, =self.axmap.plot([x1, x2], [y1, y2])
+        plt.pause(0.000001)
+        self.plot_lines.append(line)
+        # annotation = self.axmap.annotate("",
+        #                                  xy=(x1, y1), xycoords='data',
+        #                                  xytext=(x2, y2), textcoords='data',
+        #                                  arrowprops=dict(arrowstyle="-", edgecolor='black', linewidth=1, alpha=0.9, connectionstyle="arc3,rad=0"), )
+        # self.grid_markings.append(annotation)
 
     def search_heuristic(self, child_node, goal_node):
         return 0
