@@ -10,16 +10,15 @@ matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.widgets import Slider, Button
-import matplotlib.ticker as tkr
 import geopandas as gpd
 import numpy as np
 from queue import PriorityQueue
 import time
 
-MAX_SEARCH_TIME = 100
+MAX_SEARCH_TIME = 10
 
 DIAGONAL_EDGE_COST = 1.5
-CRIME_EDGE_COST = 1.2
+CRIME_EDGE_COST = 1.3
 SAFE_EDGE_COST = 1
 
 
@@ -135,6 +134,7 @@ class CrimeMap:
 
         self.axmap = None
         self.show_data = True
+        self.plot_stats = ""
 
         self.threshold_val = 0
 
@@ -286,9 +286,9 @@ class CrimeMap:
 
         # only 1 possible path (as long as adjacent cell is not blocked)
         if not cell.is_high_crime_area:
-            self.add_node_to_priority_q(i, adj_pos, DIAGONAL_EDGE_COST)
+            self.add_node_to_adjacency_lst(i, adj_pos, DIAGONAL_EDGE_COST)
 
-    def add_node_to_priority_q(self, i, pos, cost):
+    def add_node_to_adjacency_lst(self, i, pos, cost):
         node = self.get_node_by_pos(pos)
         if node:
             self.nodes[i].adjacent_nodes.append((cost, node))
@@ -345,77 +345,77 @@ class CrimeMap:
                     if x0 < node_x and y0 < node_y and x1 < node_x and y1 == node_y:
                         if cells[0].is_high_crime_area:
                             # path along left horizontal possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y], CRIME_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y], CRIME_EDGE_COST)
                             # path along upper left diagonal possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
                         elif cells[1].is_high_crime_area:
                             # path along left horizontal possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y], CRIME_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y], CRIME_EDGE_COST)
                             # path along lower left diagonal possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
                         else:
                             # path along left horizontal possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y], SAFE_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y], SAFE_EDGE_COST)
                             # path along both left diagonals possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
 
                     # cell 1 is located lower-left quadrant and cell 2 is located in lower right quadrant
                     elif x0 < node_x and y0 < node_y and x1 == node_x and y1 < node_y:
                         if cells[0].is_high_crime_area:
                             # path along lower vertical possible
-                            self.add_node_to_priority_q(i, [node_x, node_y - 1], CRIME_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x, node_y - 1], CRIME_EDGE_COST)
                             # path along lower left diagonal possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
                         elif cells[1].is_high_crime_area:
                             # path along lower vertical possible
-                            self.add_node_to_priority_q(i, [node_x, node_y - 1], CRIME_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x, node_y - 1], CRIME_EDGE_COST)
                             # path along lower right diagonal possible
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
                         else:
                             # path along lower vertical possible
-                            self.add_node_to_priority_q(i, [node_x, node_y - 1], SAFE_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x, node_y - 1], SAFE_EDGE_COST)
                             # path along both lower diagonals possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
 
                     # cell 1 is located in lower-right quadrant and cell 2 is located in upper-right quadrant
                     elif x0 == node_x and y0 < node_y and x1 == node_x and y1 == node_y:
                         if cells[0].is_high_crime_area:
                             # path along right horizontal possible
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y], CRIME_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y], CRIME_EDGE_COST)
                             # path along upper right diagonal possible
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
                         elif cells[1].is_high_crime_area:
                             # path along right horizontal possible
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y], CRIME_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y], CRIME_EDGE_COST)
                             # path along lower right diagonal possible
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
                         else:
                             # path along right horizontal possible
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y], SAFE_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y], SAFE_EDGE_COST)
                             # path along both right diagonals possible
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
 
                     # cell 1 is located in upper-left quadrant and cell 2 is located in upper-right quandrant
                     elif x0 < node_x and y0 == node_y and x1 == node_x and y1 == node_y:
                         if cells[0].is_high_crime_area:
                             # path along upper vertical possible
-                            self.add_node_to_priority_q(i, [node_x, node_y + 1], CRIME_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x, node_y + 1], CRIME_EDGE_COST)
                             # path along upper left diagonal possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
                         elif cells[1].is_high_crime_area:
                             # path along upper vertical possible
-                            self.add_node_to_priority_q(i, [node_x, node_y + 1], CRIME_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x, node_y + 1], CRIME_EDGE_COST)
                             # path along upper right diagonal possible
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
                         else:
                             # path along upper vertical possible
-                            self.add_node_to_priority_q(i, [node_x, node_y + 1], SAFE_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x, node_y + 1], SAFE_EDGE_COST)
                             # path along both upper diagonals possible
-                            self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
-                            self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
+                            self.add_node_to_adjacency_lst(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
 
             # non-boundary node
             elif len(cells) == 4:
@@ -431,16 +431,16 @@ class CrimeMap:
                             x, y = cells[j].grid_pos
                             # bottom left
                             if x < node_x and y < node_y:
-                                self.add_node_to_priority_q(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
+                                self.add_node_to_adjacency_lst(i, [node_x - 1, node_y - 1], DIAGONAL_EDGE_COST)
                             # top left
                             elif x < node_x and y == node_y:
-                                self.add_node_to_priority_q(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
+                                self.add_node_to_adjacency_lst(i, [node_x - 1, node_y + 1], DIAGONAL_EDGE_COST)
                             # bottom right
                             elif x == node_x and y < node_y:
-                                self.add_node_to_priority_q(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
+                                self.add_node_to_adjacency_lst(i, [node_x + 1, node_y - 1], DIAGONAL_EDGE_COST)
                             # top right
                             elif x == node_x and y == node_y:
-                                self.add_node_to_priority_q(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
+                                self.add_node_to_adjacency_lst(i, [node_x + 1, node_y + 1], DIAGONAL_EDGE_COST)
                             else:
                                 print('SOMETHING WENT WRONG _ _ _ _ _ _ _ _ _ _ _ _ _ ')
 
@@ -449,33 +449,33 @@ class CrimeMap:
                     if cells[0].is_high_crime_area and cells[1].is_high_crime_area:
                         pass
                     elif not cells[0].is_high_crime_area and not cells[1].is_high_crime_area:
-                        self.add_node_to_priority_q(i, [node_x - 1, node_y], SAFE_EDGE_COST)
+                        self.add_node_to_adjacency_lst(i, [node_x - 1, node_y], SAFE_EDGE_COST)
                     elif not cells[0].is_high_crime_area or not cells[1].is_high_crime_area:
-                        self.add_node_to_priority_q(i, [node_x - 1, node_y], CRIME_EDGE_COST)
+                        self.add_node_to_adjacency_lst(i, [node_x - 1, node_y], CRIME_EDGE_COST)
 
                     # right horizontal
                     if cells[2].is_high_crime_area and cells[3].is_high_crime_area:
                         pass
                     elif not cells[2].is_high_crime_area and not cells[3].is_high_crime_area:
-                        self.add_node_to_priority_q(i, [node_x + 1, node_y], SAFE_EDGE_COST)
+                        self.add_node_to_adjacency_lst(i, [node_x + 1, node_y], SAFE_EDGE_COST)
                     elif not cells[2].is_high_crime_area or not cells[3].is_high_crime_area:
-                        self.add_node_to_priority_q(i, [node_x + 1, node_y], CRIME_EDGE_COST)
+                        self.add_node_to_adjacency_lst(i, [node_x + 1, node_y], CRIME_EDGE_COST)
 
                     # north vertical
                     if cells[1].is_high_crime_area and cells[3].is_high_crime_area:
                         pass
                     elif not cells[1].is_high_crime_area and not cells[3].is_high_crime_area:
-                        self.add_node_to_priority_q(i, [node_x, node_y + 1], SAFE_EDGE_COST)
+                        self.add_node_to_adjacency_lst(i, [node_x, node_y + 1], SAFE_EDGE_COST)
                     elif not cells[1].is_high_crime_area or not cells[3].is_high_crime_area:
-                        self.add_node_to_priority_q(i, [node_x, node_y + 1], CRIME_EDGE_COST)
+                        self.add_node_to_adjacency_lst(i, [node_x, node_y + 1], CRIME_EDGE_COST)
 
                     # south vertical
                     if cells[0].is_high_crime_area and cells[2].is_high_crime_area:
                         pass
                     elif not cells[0].is_high_crime_area and not cells[2].is_high_crime_area:
-                        self.add_node_to_priority_q(i, [node_x, node_y - 1], SAFE_EDGE_COST)
+                        self.add_node_to_adjacency_lst(i, [node_x, node_y - 1], SAFE_EDGE_COST)
                     elif not cells[0].is_high_crime_area or not cells[2].is_high_crime_area:
-                        self.add_node_to_priority_q(i, [node_x, node_y - 1], CRIME_EDGE_COST)
+                        self.add_node_to_adjacency_lst(i, [node_x, node_y - 1], CRIME_EDGE_COST)
 
     def get_node_by_pos(self, pos):
         for i in self.nodes:
@@ -585,7 +585,6 @@ class CrimeMap:
 
         self.parse_crime_map(crime_map)
 
-
         self.axmap.set_xticks(np.arange(self.total_bounds[0], self.total_bounds[2], self.step_size))
         self.axmap.set_yticks(np.arange(self.total_bounds[1], self.total_bounds[3], self.step_size))
         plt.setp(self.axmap.get_xticklabels()[1::2], visible=False)
@@ -600,7 +599,9 @@ class CrimeMap:
 
         if self.show_data:
             self.set_grid_display_data()
-        self.display_plot_stats()
+        self.gen_plot_stats()
+        # display info
+        plt.title(self.plot_stats, fontsize=8)
 
     def calc_grid_dimensions(self):
         # get the bounds of the whole crime area
@@ -630,7 +631,7 @@ class CrimeMap:
                                            fontdict=dict(fontsize=3, ha='center', va='center'))
                     self.grid_display_text.append(text)
 
-    def display_plot_stats(self):
+    def gen_plot_stats(self):
         stdev = self.crimes_per_cell.std()
         mean = self.crimes_per_cell.mean()
 
@@ -648,7 +649,7 @@ class CrimeMap:
         else:
             end = ''
 
-        textstr = ' '.join((
+        self.plot_stats = ' '.join((
             r'$\mu=%.2f$' % (mean,),
             r'$\sigma=%.2f$' % (stdev,),
             r'$threshold\ value=%.0f$ ' % (self.threshold_val,),
@@ -656,8 +657,6 @@ class CrimeMap:
             end,
         ))
 
-        # display info
-        plt.title(textstr, fontsize=8)
 
     def find_bottom_left_cell_vertex_from_point(self, point):
         x = point[0]
@@ -679,15 +678,9 @@ class CrimeMap:
         return [x_pos, y_pos]
 
     def draw_path_line(self, x1, y1, x2, y2):
-        # ax = plt.gca()
         line, =self.axmap.plot([x1, x2], [y1, y2])
         plt.pause(0.000001)
         self.plot_lines.append(line)
-        # annotation = self.axmap.annotate("",
-        #                                  xy=(x1, y1), xycoords='data',
-        #                                  xytext=(x2, y2), textcoords='data',
-        #                                  arrowprops=dict(arrowstyle="-", edgecolor='black', linewidth=1, alpha=0.9, connectionstyle="arc3,rad=0"), )
-        # self.grid_markings.append(annotation)
 
     def search_heuristic(self, child_node, goal_node):
         return 0
@@ -698,6 +691,7 @@ class CrimeMap:
         if self.start[0] == -1 or self.start[1] == -1 or self.goal[0] == -1 or self.goal[1] == -1:
             print('Invalid value given, point found outside of boundaries of map!')
             return
+        plt.title(self.plot_stats + "\nSearching for Goal...", fontsize=8)
 
         # Get start and goals nodes from parsed node dictionary
         start_node = self.get_node_by_pos(self.start)
@@ -739,7 +733,7 @@ class CrimeMap:
                     x2 = path[i + 1].lat_long[0]
                     y2 = path[i + 1].lat_long[1]
                     self.draw_path_line(x1, y1, x2, y2)
-
+                plt.title(self.plot_stats + "\nSuccess! A* search found the goal in " + str(round(time_elapsed,5)) + "s", fontsize=8)
                 goal_found = True
                 break
 
@@ -792,6 +786,7 @@ class CrimeMap:
 
         if not goal_found:
             print('Error, was not able to find a valid path for the selcted start and goal!')
+            plt.title(self.plot_stats + "\nUnable to find a valid path!", fontsize=8)
 
         plt.show()
 
