@@ -501,66 +501,83 @@ class CrimeMap:
         self.cells = []
         self.nodes = {}
         crimes = crime_map[0]
+        n = len(crimes)
 
         # create node object for each vertex in grid
         # create cell object for each cell in grid. each cell has 4 vertices (nodes) to be used in A* path finder
         #
         #
-        # p3 - - - p4
-        # |  GRID  |
-        # |  CELL  |
-        # p1 - - - p2
+        #   top_left - - - - - - top_right
+        #   |                            |
+        #   |                            |
+        #   |                            |
+        #   |             GRID           |
+        #   |             CELL           |
+        #   |                            |
+        #   |                            |
+        #   |                            |
+        #   bottom_left - - - bottom_right
         #
-        # p1, p2, p3, p4 represent nodes and the cube represents a cell
-        for i in range(0, len(crimes) + 1):
-            for j in range(0, len(crimes) + 1):
+        # bottom_left, bottom_right, top_left, top_right represent nodes and the cube represents a cell
+        for i in range(0, n + 1):
+            for j in range(0, n + 1):
 
-                p1 = Node(i, j, crime_map[1][i], crime_map[2][j])
-                p2 = Node((i + 1) % len(crime_map[2]), j, crime_map[1][(i + 1) % len(crime_map[2])], crime_map[2][j])
-                p4 = Node((i + 1) % len(crime_map[2]), (j + 1) % len(crime_map[2]), crime_map[1][(i + 1) % len(crime_map[2])], crime_map[2][(j + 1) % len(crime_map[2])])
-                p3 = Node(i, (j + 1) % len(crime_map[2]), crime_map[1][i], crime_map[2][(j + 1) % len(crime_map[2])])
+                x1 = i % (n + 1)
+                y1 = j % (n + 1)
+                x2 = (i + 1) % (n + 1)
+                y2 = (j + 1) % (n + 1)
 
-                # 1d representation of 2d data
-                pos1 = i * len(crime_map[1]) + j
-                pos2 = (i + 1) * len(crime_map[1]) + j
-                pos3 = i * len(crime_map[1]) + j + 1
-                pos4 = (i + 1) * len(crime_map[1]) + j + 1
+                bottom_left = Node(x1, y1, self.grid_x_ticks[x1], self.grid_y_ticks[y1])
+                bottom_right = Node(x2, y1, self.grid_x_ticks[x2], self.grid_y_ticks[y1])
+                top_left = Node(x1, y2, self.grid_x_ticks[x1], self.grid_y_ticks[y2])
+                top_right = Node(x2, y2, self.grid_x_ticks[x2], self.grid_y_ticks[y2])
 
-                max_num_nodes = len(crime_map[1]) * len(crime_map[2])
-
-                # add nodes to nodes dictionary
-                if pos1 not in self.nodes and pos1 < max_num_nodes:
-                    self.nodes[pos1] = p1
-                if pos2 not in self.nodes and pos2 < max_num_nodes:
-                    self.nodes[pos2] = p2
-                if pos3 not in self.nodes and pos3 < max_num_nodes:
-                    self.nodes[pos3] = p3
-                if pos4 not in self.nodes and pos4 < max_num_nodes:
-                    self.nodes[pos4] = p4
-
-                # parse the cell data if we are not at the boundary of graph
-                if i < len(crimes) and j < len(crimes) and j < len(crimes[i]) and i < len(crimes[i]):
+                if i < n and j < n:
                     num_crimes = crimes[i][j]
-
+                    global cell
                     # determine if the cell is an obstruction if it has crimes that meet or exceed threshold
-                    if num_crimes >= self.threshold_val:
-                        cell = Cell(p1, p2, p3, p4, i, j, True, num_crimes)
+                    if  num_crimes >= self.threshold_val:
+                        cell = Cell(bottom_left, bottom_right, top_left, top_right, i, j, True, num_crimes)
+                        self.cells.append(cell)
                     else:
-                        cell = Cell(p1, p2, p3, p4, i, j, False, num_crimes)
+                        cell = Cell(bottom_left, bottom_right, top_left, top_right, i, j, False, num_crimes)
+                        self.cells.append(cell)
 
-                    # add the newly created cell object to adjacency list of each of its vertices (nodes)
+                    # 1d representation of 2d data
+                    max_cols = n + 1
+                    pos1 = x1 * max_cols + y1
+                    pos2 = x2 * max_cols + y1
+                    pos3 = x1 * max_cols + y2
+                    pos4 = x2 * max_cols + y2
+
+                    max_num_nodes = (n+1)*(n+1)
+
+                    # add nodes to nodes dictionary
+                    if pos1 not in self.nodes and pos1 < max_num_nodes:
+                        self.nodes[pos1] = bottom_left
+                    if pos2 not in self.nodes and pos2 < max_num_nodes:
+                        self.nodes[pos2] = bottom_right
+                    if pos3 not in self.nodes and pos3 < max_num_nodes:
+                        self.nodes[pos3] = top_left
+                    if pos4 not in self.nodes and pos4 < max_num_nodes:
+                        self.nodes[pos4] = top_right
+
                     self.add_adjacent_cell_to_node(pos1, cell)
                     self.add_adjacent_cell_to_node(pos2, cell)
                     self.add_adjacent_cell_to_node(pos3, cell)
                     self.add_adjacent_cell_to_node(pos4, cell)
 
-                    self.cells.append(cell)
-        # parse each node to make the priorityQueue adjacencyList
-        self.parse_nodes()
+        # TODO: debug remove or comment out
+        for i in sorted(self.nodes.keys()):
+            print(i, end=': ')
+            print(self.nodes[i].grid_pos)
+            cells = self.nodes[i].adjacent_cells
+            for c in cells:
+                x1, y1 = c.grid_pos
+                print('     [' + str(x1) + ',' + str(y1) + ']')
 
-        # for node in self.nodes:
-        #     print(node)
-        #     self.nodes[node].displayPriorityQ()
+        # parse each node to make the adjacency_list of neighbour nodes
+        self.parse_nodes()
 
     def update_crime_map(self):
         # get the horizontal-vertical size of grid (X*Y)
@@ -597,8 +614,6 @@ class CrimeMap:
             norm=grid_norm,
         )
 
-        self.parse_crime_map(crime_map)
-
         self.axmap.set_xticks(np.arange(self.total_bounds[0], self.total_bounds[2], self.step_size))
         self.axmap.set_yticks(np.arange(self.total_bounds[1], self.total_bounds[3], self.step_size))
         plt.setp(self.axmap.get_xticklabels()[1::2], visible=False)
@@ -610,6 +625,8 @@ class CrimeMap:
         self.crimes_per_cell = np.array(crime_map[0])
         self.grid_x_ticks = np.array(crime_map[1])
         self.grid_y_ticks = np.array(crime_map[2])
+
+        self.parse_crime_map(crime_map)
 
         if self.show_data:
             self.set_grid_display_data()
@@ -707,6 +724,7 @@ class CrimeMap:
         if self.start[0] == -1 or self.start[1] == -1 or self.goal[0] == -1 or self.goal[1] == -1:
             print('Invalid value given, point found outside of boundaries of map!')
             return
+
         plt.title(str(self.plot_stats) + "\nSearching for Goal...", fontsize=8)
 
         #admissiblity check
@@ -733,6 +751,7 @@ class CrimeMap:
             # Get the current node from open list
             current_cost, current_node = open_list.get()
 
+            # debug TODO: remove
             print('cost ' + str(current_cost))
             print('current node: ' + str(current_node.grid_pos))
             for cost, v in open_list.queue:
@@ -824,17 +843,19 @@ class CrimeMap:
                     child_node.parent = current_node
                     open_list.put((child_node.cumulative_g, child_node))
                 elif child_node in queue_nodes:
-                    cost_node_pairs = open_list.queue
                     new_pq_items = []
                     # if any nodes are replaced with an updated cost
                     # we need to set a flag to replace the priority queue with updated costs
                     should_replace = False
-                    for c, n in cost_node_pairs:
-                        # if same node is already in queue but with lower cost,
+                    for c, n in open_list.queue:
+                        # if same node is already in queue but with higher cost,
                         # we replace the higher cost node with the cheaper one
                         # we need to also make sure to set its new parent to current node
-                        if child_node == n and child_node.cumulative_g < c:
+                        if child_node == n and child_node.cumulative_g <= c:
                             n.parent = current_node
+                            # TODO: not sure about this line here
+                            n.g = child_node.g
+
                             new_pq_items.append((child_node.cumulative_g, n))
                             should_replace = True
                         # otherwise keep the child node
