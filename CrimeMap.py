@@ -52,7 +52,7 @@ class Node:
     def __init__(self, x_pos, y_pos, x_tick, y_tick):
         self.grid_pos = [x_pos, y_pos]
         self.lat_long = [x_tick, y_tick]
-        self.adjacent_nodes = PriorityQueue()
+        self.adjacent_nodes = []
         self.adjacent_cells = []
         self.h = 0
         self.g = 0
@@ -84,14 +84,6 @@ class Node:
         # for cell in self.adjacent_cells:
         #     cell.display()
 
-        print('\n')
-
-    def display_priority_q(self):
-        for i in range(self.adjacent_nodes.qsize()):
-            temp = self.adjacent_nodes.get()
-            self.adjacent_nodes.put(temp)
-            print(temp[0])
-            print('h: ' + str(temp[1].h) + ', g: ' + str(temp[1].g) + ', f: ' + str(temp[1].f))
         print('\n')
 
 
@@ -299,7 +291,7 @@ class CrimeMap:
     def add_node_to_priority_q(self, i, pos, cost):
         node = self.get_node_by_pos(pos)
         if node:
-            self.nodes[i].adjacent_nodes.put((cost, node))
+            self.nodes[i].adjacent_nodes.append((cost, node))
 
     def parse_nodes(self):
         # find all the adjacent nodes for each node in grid and place them in priority queue based on actual cost
@@ -730,12 +722,14 @@ class CrimeMap:
 
             # We have found the goal
             if current_node == goal_node:
+                curr = goal_node
                 path = []
-                current = current_node
-                while current is not None and current not in path:
-                    path.append(current)
-                    current = current.parent
-                path = path[::-1]
+                while curr != start_node:
+                    path.append(curr)
+                    curr = curr.parent
+                path.append(start_node)
+                path.reverse()
+                # calculate the elapsed time
                 time_elapsed = time.time() - start_time
                 print('A* search found shortest path sucessfully in ' + str(time_elapsed) + " seconds. Drawing path...")
                 # print the path
@@ -753,7 +747,7 @@ class CrimeMap:
             closed_list.append(current_node)
 
             # Loop through children
-            for cost, child_node in current_node.adjacent_nodes.queue:
+            for cost, child_node in current_node.adjacent_nodes:
                 # debug
                 # ax = plt.gca()
                 # ax.plot([child_node.lat_long[0], current_node.lat_long[0]], [child_node.lat_long[1], current_node.lat_long[1]])
@@ -766,8 +760,6 @@ class CrimeMap:
                 # TODO: heuristic should be approixmation of number of diagonal and orthogonal steps
                 child_node.h = self.search_heuristic(child_node, goal_node)
                 child_node.f =  child_node.cumulative_g + child_node.h
-
-                print(child_node.cumulative_g)
 
                 queue_nodes = [n for _,n in open_list.queue]
                 if child_node not in closed_list and child_node not in queue_nodes:
