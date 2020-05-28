@@ -5,6 +5,7 @@ low and high crime areas of downtown Montreal. Calculates shortest path heuristc
 on the grid
 
 Lower threshold setting --> more obstacles
+
 Higher threshold setting --> less obstacles
 
 ## Instructions to run program
