@@ -301,7 +301,7 @@ class CrimeMap:
             self.nodes[i].adjacent_nodes.append((cost, node))
 
     def parse_nodes(self):
-        # find all the adjacent nodes for each node in grid and place them in priority queue based on actual cost
+        # find all the adjacent nodes for each node in grid and place them in an adjacency list
         #
         #   X - - X - - X
         #   |     |     |
