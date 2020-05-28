@@ -246,8 +246,6 @@ class CrimeMap:
                 self.draw_point_on_map(self.goal[0], self.goal[1], 'G', 'g')
                 # call the AStarSearch on the start and goal points
                 self.a_star_search()
-                # TODO SHIT BEING DELETED FIX
-                self.update_crime_map()
 
         # user is conducting new search
         else:
