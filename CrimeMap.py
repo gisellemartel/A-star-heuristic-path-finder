@@ -158,7 +158,8 @@ class CrimeMap:
         # set layout of figures
         axthreshold = plt.axes([0.2, 0.02, 0.5, 0.03])
         axcell = plt.axes([0.2, 0.1, 0.4, 0.03])
-        axtoggle = plt.axes([0.77, 0.05, 0.05, 0.05])
+        axtoggle = plt.axes([0.75, 0.02, 0.08, 0.08])
+        axexit = plt.axes([0.1, 0.92, 0.05, 0.05])
         self.axmap = plt.axes([0.1, 0.2, 0.7, 0.7])
 
         self.update_crime_map()
@@ -166,10 +167,12 @@ class CrimeMap:
         # sliders to change threshold and cell size interactively and button to toggle data view
         sthreshold = Slider(axthreshold, 'Threshold %', 0, 100, valinit=50, valstep=1, valfmt='%0.0f')
         scell = Slider(axcell, 'Cell Size', 0.001, 0.005, valinit=0.002, valstep=0.001, valfmt='%0.3f')
-        btoggle = Button(axtoggle, 'hide/show\ndata')
+        btoggle = Button(axtoggle, 'hide/show\ndata', hovercolor='purple')
+        bexit = Button(axexit, 'exit', color='red', hovercolor='grey')
         sthreshold.label.set_fontsize(8)
         scell.label.set_fontsize(8)
-        btoggle.label.set_fontsize(4)
+        btoggle.label.set_fontsize(6)
+        bexit.label.set_fontsize(6)
 
         def update(val):
             self.threshold = sthreshold.val
@@ -179,9 +182,13 @@ class CrimeMap:
             self.clear_points_on_map()
             self.update_crime_map()
 
+        def on_press_exit(event):
+            quit()
+
         sthreshold.on_changed(update)
         scell.on_changed(update)
         btoggle.on_clicked(self.on_press_data_toggle)
+        bexit.on_clicked(on_press_exit)
         plt.ioff()
 
         self.axmap.set_picker(self.on_pick_map_coordinate)
@@ -601,7 +608,7 @@ class CrimeMap:
             self.set_grid_display_data()
         self.gen_plot_stats()
         # display info
-        plt.title(self.plot_stats, fontsize=8)
+        plt.title(str(self.plot_stats) + '\nClick on grid to select start and goal', fontsize=8)
 
     def calc_grid_dimensions(self):
         # get the bounds of the whole crime area
@@ -693,7 +700,7 @@ class CrimeMap:
         if self.start[0] == -1 or self.start[1] == -1 or self.goal[0] == -1 or self.goal[1] == -1:
             print('Invalid value given, point found outside of boundaries of map!')
             return
-        plt.title(self.plot_stats + "\nSearching for Goal...", fontsize=8)
+        plt.title(str(self.plot_stats) + "\nSearching for Goal...", fontsize=8)
 
         #admissiblity check
         admissibilty_vals = []
@@ -734,25 +741,25 @@ class CrimeMap:
 
             # We have found the goal
             if current_node == goal_node:
-                end_g = current_node.cumulative_g
+                end_g = 0
                 print('shortest path length: ' + str(end_g))
                 curr = goal_node
                 path = []
                 while curr != start_node:
                     path.append(curr)
                     curr = curr.parent
+                path.append(start_node)
+                path.reverse()
+
+                for curr in path:
                     print(curr.grid_pos)
                     print('g: ' + str(curr.g))
                     print('h: ' + str(curr.h))
                     print('cum_g: ' + str(curr.cumulative_g) + '\n')
-                path.append(start_node)
-                path.reverse()
+                    end_g = end_g + curr.g
+                print('shortest path length: ' + str(end_g))
 
-                # for curr in path:
-                #     print(curr.grid_pos)
-                #     print('g: ' + str(curr.g))
-                #     print('h: ' + str(curr.h))
-                #     print('cum_g: ' + str(curr.cumulative_g) + '\n')
+
                 # calculate the elapsed time
                 time_elapsed = time.time() - start_time
                 print('A* search found shortest path successfully in ' + str(time_elapsed) + " seconds. Drawing path...")
@@ -763,7 +770,8 @@ class CrimeMap:
                     x2 = path[i + 1].lat_long[0]
                     y2 = path[i + 1].lat_long[1]
                     self.draw_path_line(x1, y1, x2, y2)
-                plt.title(self.plot_stats + "\nSuccess! A* search found the goal in " + str(round(time_elapsed,5)) + "s", fontsize=8)
+                plt.title(str(self.plot_stats) + "\nSuccess! A* search found the goal in "
+                          + str(round(time_elapsed,5)) + "s", fontsize=8)
                 goal_found = True
 
                 # debug, to ensure admissibilitys
@@ -817,6 +825,7 @@ class CrimeMap:
                     for c, n in cost_node_pairs:
                         # if same node is already in queue but with lower cost,
                         # we replace the higher cost node with the cheaper one
+                        # we need to also make sure to set its new parent to current node
                         if child_node == n and child_node.cumulative_g < c:
                             n.parent = current_node
                             new_pq_items.append((child_node.cumulative_g, n))
@@ -836,10 +845,9 @@ class CrimeMap:
         # the algo either ran out of time or not valid path was possible due to obstacles
         if not goal_found:
             print('Error, was not able to find a valid path for the selected start and goal!')
-            plt.title(self.plot_stats + "\nUnable to find a valid path!", fontsize=8)
+            plt.title(str(self.plot_stats) + "\nUnable to find a valid path! Click on grid to select start and goal", fontsize=8)
 
         plt.show()
-
 
 def main():
     crimes_map = CrimeMap()
