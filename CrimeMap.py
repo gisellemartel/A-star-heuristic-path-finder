@@ -15,7 +15,7 @@ import numpy as np
 from queue import PriorityQueue
 import time
 
-MAX_SEARCH_TIME = 10
+MAX_SEARCH_TIME = 10000
 
 DIAGONAL_EDGE_COST = 1.5
 CRIME_EDGE_COST = 1.3
@@ -657,7 +657,6 @@ class CrimeMap:
             end,
         ))
 
-
     def find_bottom_left_cell_vertex_from_point(self, point):
         x = point[0]
         y = point[1]
@@ -679,19 +678,25 @@ class CrimeMap:
 
     def draw_path_line(self, x1, y1, x2, y2):
         line, =self.axmap.plot([x1, x2], [y1, y2])
-        plt.pause(0.000001)
+        plt.pause(0.01)
         self.plot_lines.append(line)
 
     def search_heuristic(self, child_node, goal_node):
+        # delta_x = (child_node.grid_pos[0] - goal_node.grid_pos[0])**2
+        # delta_y = (child_node.grid_pos[1] - goal_node.grid_pos[1])**2
+        #
+        # return (delta_x + delta_y)**0.5
         return 0
 
     def a_star_search(self):
-
         # sanity check
         if self.start[0] == -1 or self.start[1] == -1 or self.goal[0] == -1 or self.goal[1] == -1:
             print('Invalid value given, point found outside of boundaries of map!')
             return
         plt.title(self.plot_stats + "\nSearching for Goal...", fontsize=8)
+
+        #admissiblity check
+        admissibilty_vals = []
 
         # Get start and goals nodes from parsed node dictionary
         start_node = self.get_node_by_pos(self.start)
@@ -714,18 +719,43 @@ class CrimeMap:
             # Get the current node from open list
             current_cost, current_node = open_list.get()
 
+            print('cost ' + str(current_cost))
+            print('current node: ' + str(current_node.grid_pos))
+            for cost, v in open_list.queue:
+                print('| g: ' + str(v.g) + ', ', end='')
+                print('cum_g: ' + str(v.cumulative_g) + ', ', end='')
+                print('(' + str(v.grid_pos[0]), end='')
+                print(',' + str(v.grid_pos[1]) + ') |', end='')
+            print('')
+            for v in closed_list:
+                print('(' + str(v.grid_pos[0]), end='')
+                print(',' + str(v.grid_pos[1]) + '), ', end='')
+            print('\n')
+
             # We have found the goal
             if current_node == goal_node:
+                end_g = current_node.cumulative_g
+                print('shortest path length: ' + str(end_g))
                 curr = goal_node
                 path = []
                 while curr != start_node:
                     path.append(curr)
                     curr = curr.parent
+                    print(curr.grid_pos)
+                    print('g: ' + str(curr.g))
+                    print('h: ' + str(curr.h))
+                    print('cum_g: ' + str(curr.cumulative_g) + '\n')
                 path.append(start_node)
                 path.reverse()
+
+                # for curr in path:
+                #     print(curr.grid_pos)
+                #     print('g: ' + str(curr.g))
+                #     print('h: ' + str(curr.h))
+                #     print('cum_g: ' + str(curr.cumulative_g) + '\n')
                 # calculate the elapsed time
                 time_elapsed = time.time() - start_time
-                print('A* search found shortest path sucessfully in ' + str(time_elapsed) + " seconds. Drawing path...")
+                print('A* search found shortest path successfully in ' + str(time_elapsed) + " seconds. Drawing path...")
                 # print the path
                 for i in range(0, len(path) - 1):
                     x1 = path[i].lat_long[0]
@@ -735,6 +765,22 @@ class CrimeMap:
                     self.draw_path_line(x1, y1, x2, y2)
                 plt.title(self.plot_stats + "\nSuccess! A* search found the goal in " + str(round(time_elapsed,5)) + "s", fontsize=8)
                 goal_found = True
+
+                # debug, to ensure admissibilitys
+
+                # print('shortest path length: ' + str(end_g))
+                # for h, g, cum_g in admissibilty_vals:
+                #     h_star = end_g - cum_g
+                #     print('h: ' + str(h))
+                #     print('g: ' + str(g))
+                #     print('cum_g: ' + str(cum_g))
+                #     print
+
+                    # if(h > h_star):
+                        # print(h)
+                        # print(h_star)
+                        # print('\n')
+
                 break
 
             # add node to closed list once it has been visited
@@ -743,10 +789,9 @@ class CrimeMap:
             # Loop through children
             for cost, child_node in current_node.adjacent_nodes:
                 # debug
-                # ax = plt.gca()
-                # ax.plot([child_node.lat_long[0], current_node.lat_long[0]], [child_node.lat_long[1], current_node.lat_long[1]])
-                # plt.draw()
-                # plt.pause(0.00001)
+                # x1, y1 = child_node.lat_long
+                # x2, y2 = current_node.lat_long
+                # self.draw_path_line(x1, y1, x2, y2)
 
                 # set the actual cost
                 child_node.g = cost
@@ -754,6 +799,9 @@ class CrimeMap:
                 # TODO: heuristic should be approixmation of number of diagonal and orthogonal steps
                 child_node.h = self.search_heuristic(child_node, goal_node)
                 child_node.f =  child_node.cumulative_g + child_node.h
+
+                # debug: to ensure admissibility
+                admissibilty_vals.append((child_node.h, child_node.g, child_node.cumulative_g))
 
                 queue_nodes = [n for _,n in open_list.queue]
                 if child_node not in closed_list and child_node not in queue_nodes:
@@ -770,6 +818,7 @@ class CrimeMap:
                         # if same node is already in queue but with lower cost,
                         # we replace the higher cost node with the cheaper one
                         if child_node == n and child_node.cumulative_g < c:
+                            n.parent = current_node
                             new_pq_items.append((child_node.cumulative_g, n))
                             should_replace = True
                         # otherwise keep the child node
@@ -784,8 +833,9 @@ class CrimeMap:
 
                 time_elapsed = time.time() - start_time
 
+        # the algo either ran out of time or not valid path was possible due to obstacles
         if not goal_found:
-            print('Error, was not able to find a valid path for the selcted start and goal!')
+            print('Error, was not able to find a valid path for the selected start and goal!')
             plt.title(self.plot_stats + "\nUnable to find a valid path!", fontsize=8)
 
         plt.show()
