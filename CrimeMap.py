@@ -15,7 +15,7 @@ import numpy as np
 from queue import PriorityQueue
 import time
 
-MAX_SEARCH_TIME = 10000
+MAX_SEARCH_TIME = 10
 
 DIAGONAL_EDGE_COST = 1.5
 CRIME_EDGE_COST = 1.3
