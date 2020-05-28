@@ -843,10 +843,12 @@ class CrimeMap:
                 time_elapsed = time.time() - start_time
 
         # the algo either ran out of time or not valid path was possible due to obstacles
-        if not goal_found:
-            print('Error, was not able to find a valid path for the selected start and goal!')
-            plt.title(str(self.plot_stats) + "\nUnable to find a valid path! Click on grid to select start and goal", fontsize=8)
-
+        if not goal_found and time_elapsed < MAX_SEARCH_TIME:
+            print('Due to blocks, no path is found. Please change the map and try again')
+            plt.title(str(self.plot_stats) + "\nDue to blocks, no path is found. Please change the map and try again", fontsize=7)
+        elif not goal_found and time_elapsed >= MAX_SEARCH_TIME:
+            print('Time is up. The optimal path is not found.')
+            plt.title(str(self.plot_stats) + "\nTime is up. The optimal path is not found.", fontsize=8)
         plt.show()
 
 def main():
