@@ -1,8 +1,8 @@
-# heuristic_search_map
+# A* Heuristic Path Finder - Montreal Map with Crime Data
 
 Custom implementation of A* heuristic search algorithm for 2D grid representing
 low and high crime areas of downtown Montreal. Calculates shortest path heuristcally between 2 points
-on the grid
+on the grid. Higher crime areas are represented as purple squares (obstacles).
 
 Lower threshold setting --> more obstacles
 
