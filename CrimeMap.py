@@ -593,13 +593,13 @@ class CrimeMap:
 
         self.parse_crime_map(crime_map)
 
-        padding = 0
 
-        plt.xlim(self.total_bounds[0] - padding, self.total_bounds[2] + padding)
-        plt.ylim(self.total_bounds[1] - padding, self.total_bounds[3] + padding)
+        self.axmap.set_xticks(np.arange(self.total_bounds[0], self.total_bounds[2], self.step_size))
+        self.axmap.set_yticks(np.arange(self.total_bounds[1], self.total_bounds[3], self.step_size))
+        plt.setp(self.axmap.get_xticklabels()[1::2], visible=False)
 
-        self.axmap.xaxis.set_minor_locator(tkr.AutoMinorLocator(n=5))
-        self.axmap.yaxis.set_minor_locator(tkr.AutoMinorLocator(n=5))
+        for tick in self.axmap.xaxis.get_minor_ticks():
+            tick.tick1line.set_markersize(0)
 
         # update the tick values and # of crimes per cell
         self.crimes_per_cell = np.array(crime_map[0])
