@@ -86,7 +86,16 @@ class Node:
         print('\n')
 
 
-def find_pos_of_tick(grid_ticks, p):
+def find_pos_of_tick(grid_ticks, p, margin):
+    #if user select point outside grid boundary, find nearest point:
+    distance_from_boundary = abs(grid_ticks[0] - p)
+    if distance_from_boundary < margin/2:
+        return 0
+
+    distance_from_boundary = abs(grid_ticks[len(grid_ticks) - 1] - p)
+    if distance_from_boundary < margin/2:
+        return len(grid_ticks) - 1
+
     # if user selects point that is not grid tick, it will select the tick to the left of the point on x-axis
     for i in range(0, len(grid_ticks)):
         if grid_ticks[i] == p:
@@ -674,10 +683,10 @@ class CrimeMap:
             return [-1, -1]
 
         # if user selects point that is not grid tick, it will select the tick to the left of the point on x-axis
-        x_pos = find_pos_of_tick(self.grid_x_ticks, x)
+        x_pos = find_pos_of_tick(self.grid_x_ticks, x, self.step_size)
 
         # if user selects point that is not grid tick, it will select the tick below the point on the y-axis
-        y_pos = find_pos_of_tick(self.grid_y_ticks, y)
+        y_pos = find_pos_of_tick(self.grid_y_ticks, y, self.step_size)
 
         return [x_pos, y_pos]
 
