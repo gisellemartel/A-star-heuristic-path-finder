@@ -769,8 +769,9 @@ class CrimeMap:
         estimate_remaing_straight_steps_cost = SAFE_EDGE_COST * diagonal_distance
 
         # an estimation of how many diagonal and straight path steps we have left to take until the goal
-        h = (estimate_remaing_straight_steps_cost + estimate_diagonal_cost_savings)
-        return h
+        t_ratio = self.threshold * 0.01
+        h = (estimate_remaing_straight_steps_cost + estimate_diagonal_cost_savings) * t_ratio
+        return 0
 
     def a_star_search(self):
         plt.title(str(self.plot_stats) + "\nSearching for Goal...", fontsize=8)
@@ -836,7 +837,7 @@ class CrimeMap:
                 # self.draw_path_line(x1, y1, x2, y2)
 
                 # set the cost from start to current node
-                neighbour.g = cost
+                # neighbour.g = cost
                 neighbour.cumulative_g = cost + current_node.cumulative_g
                 # the estimates cost from current node to goal node
                 neighbour.h = self.search_heuristic(current_node, goal_node)
