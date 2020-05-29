@@ -769,6 +769,7 @@ class CrimeMap:
         estimate_remaing_straight_steps_cost = SAFE_EDGE_COST * diagonal_distance
 
         # an estimation of how many diagonal and straight path steps we have left to take until the goal
+        # takes into account the threshold ratio of obstacles
         t_ratio = self.threshold * 0.01
         h = (estimate_remaing_straight_steps_cost + estimate_diagonal_cost_savings) * t_ratio
         return 0
