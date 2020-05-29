@@ -305,9 +305,16 @@ class CrimeMap:
     def add_node_to_adjacency_lst(self, i, pos, cost):
         node = self.get_node_by_pos(pos)
         if node:
+            node.g = cost
             self.nodes[i].adjacent_nodes.append((cost, node))
 
-    def parse_nodes(self):
+    def get_node_by_pos(self, pos):
+        for i in self.nodes:
+            if self.nodes[i] and self.nodes[i].grid_pos == pos:
+                return self.nodes[i]
+        return None
+
+    def parse_grid_nodes(self):
         # find all the adjacent nodes for each node in grid and place them in an adjacency list
         #
         #   X - - X - - X
@@ -491,13 +498,7 @@ class CrimeMap:
                     elif not cells[0].is_high_crime_area or not cells[2].is_high_crime_area:
                         self.add_node_to_adjacency_lst(i, [node_x, node_y - 1], CRIME_EDGE_COST)
 
-    def get_node_by_pos(self, pos):
-        for i in self.nodes:
-            if self.nodes[i] and self.nodes[i].grid_pos == pos:
-                return self.nodes[i]
-        return None
-
-    def parse_crime_map(self, crime_map):
+    def parse_grid_cells(self, crime_map):
         self.cells = []
         self.nodes = {}
         crimes = crime_map[0]
@@ -567,17 +568,17 @@ class CrimeMap:
                     self.add_adjacent_cell_to_node(pos3, cell)
                     self.add_adjacent_cell_to_node(pos4, cell)
 
-        # TODO: debug remove or comment out
-        for i in sorted(self.nodes.keys()):
-            print(i, end=': ')
-            print(self.nodes[i].grid_pos)
-            cells = self.nodes[i].adjacent_cells
-            for c in cells:
-                x1, y1 = c.grid_pos
-                print('     [' + str(x1) + ',' + str(y1) + ']')
+        # debug
+        # for i in sorted(self.nodes.keys()):
+        #     print(i, end=': ')
+        #     print(self.nodes[i].grid_pos)
+        #     cells = self.nodes[i].adjacent_cells
+        #     for c in cells:
+        #         x1, y1 = c.grid_pos
+        #         print('     [' + str(x1) + ',' + str(y1) + ']')
 
         # parse each node to make the adjacency_list of neighbour nodes
-        self.parse_nodes()
+        self.parse_grid_nodes()
 
     def update_crime_map(self):
         # get the horizontal-vertical size of grid (X*Y)
@@ -626,7 +627,7 @@ class CrimeMap:
         self.grid_x_ticks = np.array(crime_map[1])
         self.grid_y_ticks = np.array(crime_map[2])
 
-        self.parse_crime_map(crime_map)
+        self.parse_grid_cells(crime_map)
 
         if self.show_data:
             self.set_grid_display_data()
@@ -707,33 +708,64 @@ class CrimeMap:
 
         return [x_pos, y_pos]
 
+    def is_crime_edge(self, n1, n2):
+        # determines if line formed by 2 nodes goes through a crime edge
+        cells_1 = n1.adjacent_cells
+        cells_2 = n2.adjacent_cells
+
+        common_cells = [c for c in cells_1 if c in cells_2]
+
+        return common_cells[0].is_high_crime_area ^ common_cells[1].is_high_crime_area
+
+    def calc_step_cost(self, n1, n2):
+        if abs(n1.grid_pos[0] - n2.grid_pos[0]) > 0 and abs(n1.grid_pos[1] - n2.grid_pos[1]):
+            return DIAGONAL_EDGE_COST
+        elif self.is_crime_edge(n1, n2):
+            return CRIME_EDGE_COST
+        else:
+            return SAFE_EDGE_COST
+
+    def print_path(self, path):
+        # print the path
+        for i in range(0, len(path) - 1):
+            x1 = path[i].lat_long[0]
+            y1 = path[i].lat_long[1]
+            x2 = path[i + 1].lat_long[0]
+            y2 = path[i + 1].lat_long[1]
+            self.draw_path_line(x1, y1, x2, y2)
+
     def draw_path_line(self, x1, y1, x2, y2):
-        line, =self.axmap.plot([x1, x2], [y1, y2])
+        line, =self.axmap.plot([x1, x2], [y1, y2], color='black')
         plt.pause(0.01)
         self.plot_lines.append(line)
 
-    def search_heuristic(self, child_node, goal_node):
-        # delta_x = (child_node.grid_pos[0] - goal_node.grid_pos[0])**2
-        # delta_y = (child_node.grid_pos[1] - goal_node.grid_pos[1])**2
-        #
-        # return (delta_x + delta_y)**0.5
-        return 0
+    def search_heuristic(self, curr_node, goal_node):
+        # use a heuristic that calculates the diagonal distance, and then
+        x1, y1 = curr_node.grid_pos
+        x2, y2 = goal_node.grid_pos
+        dx = abs(x1 - x2)
+        dy = abs(y1 - y2)
+
+        # the diagonal distance between the 2 nodes
+        diagonal_distance = dx + dy
+        # the amount of distance we save by using a diagonal over 2 straight lines to move to next cell
+        # i.e. diagonal cost = 1.5 and two straight lines = 1 + 1 = 2
+        savings_from_taking_diagonal = (DIAGONAL_EDGE_COST - 2 * SAFE_EDGE_COST)
+        estimate_diagonal_cost_savings = savings_from_taking_diagonal * min(dx,dy)
+        estimate_remaing_straight_steps_cost = SAFE_EDGE_COST * diagonal_distance
+
+        # an estimation of how many diagonal and straight path steps we have left to take until the goal
+        h = estimate_remaing_straight_steps_cost + estimate_diagonal_cost_savings
+        return h
 
     def a_star_search(self):
-        # sanity check
-        if self.start[0] == -1 or self.start[1] == -1 or self.goal[0] == -1 or self.goal[1] == -1:
-            print('Invalid value given, point found outside of boundaries of map!')
-            return
-
         plt.title(str(self.plot_stats) + "\nSearching for Goal...", fontsize=8)
-
-        #admissiblity check
-        admissibilty_vals = []
 
         # Get start and goals nodes from parsed node dictionary
         start_node = self.get_node_by_pos(self.start)
         goal_node = self.get_node_by_pos(self.goal)
 
+        # set timer for A* search time
         start_time = time.time()
         time_elapsed = 0.0
 
@@ -746,131 +778,87 @@ class CrimeMap:
 
         goal_found = False
 
+        shortest_path = 0
+
         # Loop goal is found or all possible nodes visited
         while not open_list.empty() and time_elapsed < MAX_SEARCH_TIME:
             # Get the current node from open list
             current_cost, current_node = open_list.get()
 
-            # debug TODO: remove
-            print('cost ' + str(current_cost))
-            print('current node: ' + str(current_node.grid_pos))
-            for cost, v in open_list.queue:
-                print('| g: ' + str(v.g) + ', ', end='')
-                print('cum_g: ' + str(v.cumulative_g) + ', ', end='')
-                print('(' + str(v.grid_pos[0]), end='')
-                print(',' + str(v.grid_pos[1]) + ') |', end='')
-            print('')
-            for v in closed_list:
-                print('(' + str(v.grid_pos[0]), end='')
-                print(',' + str(v.grid_pos[1]) + '), ', end='')
-            print('\n')
-
             # We have found the goal
             if current_node == goal_node:
-                end_g = 0
-                print('shortest path length: ' + str(end_g))
+                # backtrack to get shortest path
                 curr = goal_node
                 path = []
                 while curr != start_node:
+                    shortest_path = shortest_path + self.calc_step_cost(curr, curr.parent)
                     path.append(curr)
                     curr = curr.parent
                 path.append(start_node)
                 path.reverse()
-
-                for curr in path:
-                    print(curr.grid_pos)
-                    print('g: ' + str(curr.g))
-                    print('h: ' + str(curr.h))
-                    print('cum_g: ' + str(curr.cumulative_g) + '\n')
-                    end_g = end_g + curr.g
-                print('shortest path length: ' + str(end_g))
-
-
                 # calculate the elapsed time
                 time_elapsed = time.time() - start_time
-                print('A* search found shortest path successfully in ' + str(time_elapsed) + " seconds. Drawing path...")
-                # print the path
-                for i in range(0, len(path) - 1):
-                    x1 = path[i].lat_long[0]
-                    y1 = path[i].lat_long[1]
-                    x2 = path[i + 1].lat_long[0]
-                    y2 = path[i + 1].lat_long[1]
-                    self.draw_path_line(x1, y1, x2, y2)
+                print('A* search found shortest path of ' + str(shortest_path)
+                      + ' successfully in ' + str(time_elapsed) + " seconds. Drawing path...")
+                # print the path on the grid UI
+                self.print_path(path)
                 plt.title(str(self.plot_stats) + "\nSuccess! A* search found the goal in "
-                          + str(round(time_elapsed,5)) + "s", fontsize=8)
+                          + str(round(time_elapsed,5)) + "s.\nTotal Cost: " +  str(shortest_path), fontsize=8)
                 goal_found = True
-
-                # debug, to ensure admissibilitys
-
-                # print('shortest path length: ' + str(end_g))
-                # for h, g, cum_g in admissibilty_vals:
-                #     h_star = end_g - cum_g
-                #     print('h: ' + str(h))
-                #     print('g: ' + str(g))
-                #     print('cum_g: ' + str(cum_g))
-                #     print
-
-                    # if(h > h_star):
-                        # print(h)
-                        # print(h_star)
-                        # print('\n')
-
                 break
 
             # add node to closed list once it has been visited
             closed_list.append(current_node)
 
-            # Loop through children
-            for cost, child_node in current_node.adjacent_nodes:
-                # debug
-                # x1, y1 = child_node.lat_long
-                # x2, y2 = current_node.lat_long
+            # iterate over neighbour nodes of the current node to populate the open list
+            for cost, neighbour in current_node.adjacent_nodes:
+                # debug code
+                # x1, y1 = child_node.lat_long, x2, y2 = current_node.lat_long
                 # self.draw_path_line(x1, y1, x2, y2)
 
-                # set the actual cost
-                child_node.g = cost
-                child_node.cumulative_g = cost + current_node.cumulative_g
-                # TODO: heuristic should be approixmation of number of diagonal and orthogonal steps
-                child_node.h = self.search_heuristic(child_node, goal_node)
-                child_node.f =  child_node.cumulative_g + child_node.h
-
-                # debug: to ensure admissibility
-                admissibilty_vals.append((child_node.h, child_node.g, child_node.cumulative_g))
+                # set the cost from start to current node
+                neighbour.cumulative_g = cost + current_node.cumulative_g
+                # the estimates cost from current node to goal node
+                neighbour.h = self.search_heuristic(current_node, goal_node)
+                # f = g + h
+                neighbour.f =  neighbour.cumulative_g + neighbour.h
 
                 queue_nodes = [n for _,n in open_list.queue]
-                if child_node not in closed_list and child_node not in queue_nodes:
+                # check to see if neighbour is already in open or closed list
+                if neighbour not in closed_list and neighbour not in queue_nodes:
                     # if we have not yet visited or placed this node in the queue, then set its parent
-                    child_node.parent = current_node
-                    open_list.put((child_node.cumulative_g, child_node))
-                elif child_node in queue_nodes:
+                    neighbour.parent = current_node
+                    open_list.put((neighbour.f, neighbour))
+                # neighbour was found in open list, we need to see if there is cheaper path to it
+                elif neighbour in queue_nodes:
                     new_pq_items = []
                     # if any nodes are replaced with an updated cost
                     # we need to set a flag to replace the priority queue with updated costs
                     should_replace = False
-                    for c, n in open_list.queue:
+                    for f, n in open_list.queue:
                         # if same node is already in queue but with higher cost,
                         # we replace the higher cost node with the cheaper one
                         # we need to also make sure to set its new parent to current node
-                        if child_node == n and child_node.cumulative_g <= c:
+                        if neighbour == n and neighbour.f < f:
+                            n.g = neighbour.g
+                            n.cumulative_g = neighbour.cumulative_g
                             n.parent = current_node
-                            # TODO: not sure about this line here
-                            n.g = child_node.g
-
-                            new_pq_items.append((child_node.cumulative_g, n))
+                            new_pq_items.append((neighbour.f, n))
                             should_replace = True
-                        # otherwise keep the child node
+                        # otherwise keep the neighbour node
                         else:
-                            new_pq_items.append((c, n))
+                            new_pq_items.append((f, n))
 
                     if should_replace:
-                        # reorder the priority queue open list
+                        # we have to reorder the priority queue open list if changes were made to costs
                         open_list = PriorityQueue()
-                        for c_n_pair in new_pq_items:
-                            open_list.put(c_n_pair)
+                        for f_node_pair in new_pq_items:
+                            open_list.put(f_node_pair)
 
+                # update timer
                 time_elapsed = time.time() - start_time
 
-        # the algo either ran out of time or not valid path was possible due to obstacles
+        # A* search either ran out of time or no valid path was possible due to obstacles
         if not goal_found and time_elapsed < MAX_SEARCH_TIME:
             print('Due to blocks, no path is found. Please change the map and try again')
             plt.title(str(self.plot_stats) + "\nDue to blocks, no path is found. Please change the map and try again", fontsize=7)
