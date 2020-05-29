@@ -750,7 +750,7 @@ class CrimeMap:
 
     def draw_path_line(self, x1, y1, x2, y2):
         line, =self.axmap.plot([x1, x2], [y1, y2], color='black')
-        plt.pause(0.01)
+        plt.pause(0.00001)
         self.plot_lines.append(line)
 
     def search_heuristic(self, curr_node, goal_node):
@@ -820,7 +820,7 @@ class CrimeMap:
                 # print the path on the grid UI
                 self.print_path(path)
                 plt.title(str(self.plot_stats) + "\nSuccess! A* search found the goal in "
-                          + str(round(time_elapsed,5)) + "s.\nTotal Cost: " +  str(shortest_path), fontsize=8)
+                          + str(round(time_elapsed,5)) + "s.\nTotal Cost: " +  str(round(shortest_path, 2)), fontsize=8)
                 goal_found = True
                 # debug
                 # self.show_search_admissibility(path, shortest_path)
