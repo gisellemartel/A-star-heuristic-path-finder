@@ -708,6 +708,20 @@ class CrimeMap:
 
         return [x_pos, y_pos]
 
+    def show_search_admissibility(self, path, path_cost):
+        # retrace back the costs of the shortest path
+        path[0].cumulative_g = 0
+        for i in range(1,len(path)):
+            path[i].cumulative_g = path[i - 1].cumulative_g + path[i].g
+
+        # do the admissibility check for each step
+        for i in range(0, len(path)-1):
+            h_star = round(path_cost - path[i].cumulative_g, 1)
+            print('g=' + str(round(path[i].cumulative_g,1)) + '    ', end='')
+            print('h=' + str(round(path[i].h, 1)) + '    ', end='')
+            print('h*=' + str(round(h_star,1))+ '    ', end='')
+            print('h <= h* ? - ' + str(path[i].h < h_star))
+
     def is_crime_edge(self, n1, n2):
         # determines if line formed by 2 nodes goes through a crime edge
         cells_1 = n1.adjacent_cells
@@ -755,7 +769,7 @@ class CrimeMap:
         estimate_remaing_straight_steps_cost = SAFE_EDGE_COST * diagonal_distance
 
         # an estimation of how many diagonal and straight path steps we have left to take until the goal
-        h = estimate_remaing_straight_steps_cost + estimate_diagonal_cost_savings
+        h = (estimate_remaing_straight_steps_cost + estimate_diagonal_cost_savings)
         return h
 
     def a_star_search(self):
@@ -788,11 +802,14 @@ class CrimeMap:
             # We have found the goal
             if current_node == goal_node:
                 # backtrack to get shortest path
+                goal_node.cumulative_g = 0
                 curr = goal_node
                 path = []
                 while curr != start_node:
-                    shortest_path = shortest_path + self.calc_step_cost(curr, curr.parent)
+                    step_cost = self.calc_step_cost(curr, curr.parent)
+                    shortest_path = shortest_path + step_cost
                     path.append(curr)
+                    curr.parent.g = step_cost
                     curr = curr.parent
                 path.append(start_node)
                 path.reverse()
@@ -805,6 +822,8 @@ class CrimeMap:
                 plt.title(str(self.plot_stats) + "\nSuccess! A* search found the goal in "
                           + str(round(time_elapsed,5)) + "s.\nTotal Cost: " +  str(shortest_path), fontsize=8)
                 goal_found = True
+                # debug
+                # self.show_search_admissibility(path, shortest_path)
                 break
 
             # add node to closed list once it has been visited
@@ -817,6 +836,7 @@ class CrimeMap:
                 # self.draw_path_line(x1, y1, x2, y2)
 
                 # set the cost from start to current node
+                neighbour.g = cost
                 neighbour.cumulative_g = cost + current_node.cumulative_g
                 # the estimates cost from current node to goal node
                 neighbour.h = self.search_heuristic(current_node, goal_node)
